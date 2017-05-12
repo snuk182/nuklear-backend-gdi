@@ -1,16 +1,16 @@
 [package]
-name = "nuklear-backend-gfx"
-version = "0.3.0"
+name = "nuklear-backend-gdi"
+version = "0.1.0"
 authors = ["Serhii Plyhun <snuk188@gmail.com>"]
 keywords = ["widgets", "gui", "interface", "graphics", "gdi"]
 description = "A WinAPI GDI drawing backend for Rust wrapper for Nuklear 2D GUI library"
 license = "MIT OR Apache-2.0"
 readme = "README.md"
-repository = "https://github.com/snuk182/nuklear-backend-gfx.git"
-homepage = "https://github.com/snuk182/nuklear-backend-gfx"
+repository = "https://github.com/snuk182/nuklear-backend-gdi.git"
+homepage = "https://github.com/snuk182/nuklear-backend-gdi"
 
 [lib]
-name = "nuklear_backend_gfx"
+name = "nuklear_backend_gdi"
 path = "src/lib.rs"
 
 [dependencies]
