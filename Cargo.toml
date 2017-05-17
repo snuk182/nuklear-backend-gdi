@@ -21,4 +21,10 @@ kernel32-sys = "~0.2"
 winapi = "~0.2"
 nuklear-rust = {version = "~0.2", path = "../nuklear-rust"}
 
+[dependencies.image]
+version = "~0.12"
+optional = true
 
+[features]
+default = ["piston_image"]
+piston_image = ["image"]

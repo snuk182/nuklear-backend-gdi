@@ -5,6 +5,9 @@ extern crate gdi32;
 extern crate kernel32;
 extern crate user32;
 
+#[cfg(feature = "piston_image")]
+extern crate image;
+
 use std::{ptr, mem, str, slice};
 use std::os::raw;
 
@@ -109,7 +112,58 @@ impl Drawer {
 		
 			nuklear_rust::NkUserFont::new(&mut gdifont.nk)
 		}
-	} 
+	}
+	
+	#[cfg(feature = "piston_image")]
+	pub fn add_image(&mut self, img: &image::DynamicImage) -> nuklear_rust::NkHandle {
+		use image::{Pixel,GenericImage};
+		
+		let (w, h) = img.dimensions();
+		
+		let hbmp: winapi::HBITMAP;
+	 
+	    let bminfo = winapi::BITMAPINFO {
+		    bmiHeader: winapi::BITMAPINFOHEADER {
+			    biSize: mem::size_of::<winapi::BITMAPINFOHEADER>() as u32,
+			    biWidth: w as i32,
+			    biHeight: h as i32,
+			    biPlanes: 1,
+			    biBitCount: 32,
+			    biCompression: winapi::BI_RGB,
+			    biSizeImage: 0,
+			    biXPelsPerMeter: 0,
+			    biYPelsPerMeter: 0,
+			    biClrUsed: 0,
+			    biClrImportant: 0,
+		    },
+		    bmiColors: unsafe { mem::zeroed() },
+	    };
+	    
+		unsafe {
+			let mut pv_image_bits = ptr::null_mut();
+		    let hdc_screen = user32::GetDC(ptr::null_mut());
+		    hbmp = gdi32::CreateDIBSection(hdc_screen, &bminfo, winapi::DIB_RGB_COLORS, &mut pv_image_bits, ptr::null_mut(), 0);
+		    user32::ReleaseDC(ptr::null_mut(), hdc_screen);
+		    /*if hbmp.is_null() {
+		        return;
+		    }*/ //TODO
+		    
+		    let cb_stride = w as u32 * 4;
+		    
+		    for (x,y,p) in img.pixels() {
+		    	let p = p.to_rgba();
+		    	*(pv_image_bits.offset(((x * 4) + (y * cb_stride)) as isize) as *mut [u8; 4]) = p.data;
+		    }
+		    /*{
+		        // couldn't extract image; delete HBITMAP
+		        gdi32::DeleteObject(hbmp as *mut raw::c_void);
+		        hbmp = ptr::null_mut();
+		        return;
+		    }*/ //TODO
+		}
+		
+		nuklear_rust::NkHandle::from_ptr(hbmp as *mut raw::c_void)
+	}
 	
 	pub fn handle_event(&mut self, ctx: &mut nuklear_rust::NkContext, wnd: winapi::HWND, msg: winapi::UINT, wparam: winapi::WPARAM, lparam: winapi::LPARAM) -> bool {
 	    match msg {
@@ -289,16 +343,16 @@ impl Drawer {
 			for cmd in ctx.command_iterator() {
 		        match cmd.get_type() {
 			        nuklear_rust::NkCommandType::NK_COMMAND_SCISSOR => {
-			            let s = &cmd as *const _ as *const nuklear_rust::nuklear_sys::nk_command_scissor;
-			            nk_gdi_scissor(memory_dc, (*s).x as f32, (*s).y as f32, (*s).w as f32, (*s).h as f32);
+			            let s = nuklear_rust::NkCommandScissor::from(cmd);
+			            nk_gdi_scissor(memory_dc, s.x() as f32, s.y() as f32, s.w() as f32, s.h() as f32);
 			        },
 			        nuklear_rust::NkCommandType::NK_COMMAND_LINE => {
-			            let l = &cmd as *const _ as *const nuklear_rust::nuklear_sys::nk_command_line;
-			            nk_gdi_stroke_line(memory_dc, (*l).begin.x as i32, (*l).begin.y as i32, (*l).end.x as i32, (*l).end.y as i32, (*l).line_thickness as i32, (*l).color);
+			            let l = nuklear_rust::NkCommandLine::from(cmd);
+			            nk_gdi_stroke_line(memory_dc, l.begin().x as i32, l.begin().y as i32, l.end().x as i32, l.end().y as i32, l.line_thickness() as i32, l.color());
 			        },
 			        nuklear_rust::NkCommandType::NK_COMMAND_RECT => {
-			            let r = &cmd as *const _ as *const nuklear_rust::nuklear_sys::nk_command_rect;
-			            nk_gdi_stroke_rect(memory_dc, (*r).x as i32, (*r).y as i32, (*r).w as i32, (*r).h as i32, (*r).rounding as u16 as i32, (*r).line_thickness as i32, (*r).color);
+			            let r = nuklear_rust::NkCommandRect::from(cmd);
+			            nk_gdi_stroke_rect(memory_dc, r.x() as i32, r.y() as i32, r.w() as i32, r.h() as i32, r.rounding() as u16 as i32, r.line_thickness() as i32, r.color());
 			        },
 			        nuklear_rust::NkCommandType::NK_COMMAND_RECT_FILLED => {
 			            let r = &cmd as *const _ as *const nuklear_rust::nuklear_sys::nk_command_rect_filled;
@@ -333,8 +387,8 @@ impl Drawer {
 			            nk_gdi_stroke_polyline(memory_dc, &(*p).points[0], (*p).point_count as usize, (*p).line_thickness as i32, (*p).color);
 			        },
 			        nuklear_rust::NkCommandType::NK_COMMAND_TEXT => {
-			            let t = &cmd as *const _ as *const nuklear_rust::nuklear_sys::nk_command_text;
-			            nk_gdi_draw_text(memory_dc, (*t).x as i32, (*t).y as i32, (*t).w as i32, (*t).h as i32, &(*t).string[0], (*t).length, *(*(*t).font).userdata.ptr.as_ref() as *const GdiFont, (*t).background, (*t).foreground);
+			            let t = nuklear_rust::NkCommandText::from(cmd);
+			            nk_gdi_draw_text(memory_dc, t.x() as i32, t.y() as i32, t.w() as i32, t.h() as i32, t.chars().as_ptr() as *const i8, t.chars().len() as i32, (t.font()).userdata_ptr().ptr().unwrap() as *const GdiFont, t.background(), t.foreground());
 			        },
 			        nuklear_rust::NkCommandType::NK_COMMAND_CURVE => {
 			            let q = &cmd as *const _ as *const nuklear_rust::nuklear_sys::nk_command_curve;
@@ -595,18 +649,14 @@ unsafe fn nk_gdi_stroke_curve(dc: winapi::HDC, p1: nuklear_rust::NkVec2i, p2: nu
 
 unsafe fn nk_gdi_draw_text(dc: winapi::HDC, x: i32, y: i32, w: i32, h: i32, text: *const i8, text_len: i32, font: *const GdiFont, cbg: nuklear_rust::NkColor, cfg: nuklear_rust::NkColor) {
     let wsize = kernel32::MultiByteToWideChar(winapi::CP_UTF8, 0, text, text_len, ptr::null_mut(), 0);
-    let mut wstr = Vec::with_capacity(wsize as usize * mem::size_of::<winapi::wchar_t>());
-    kernel32::MultiByteToWideChar(winapi::CP_UTF8, 0, text, text_len, wstr.as_mut_slice()[0], wsize);
+    let mut wstr = vec![0u16; wsize as usize * mem::size_of::<winapi::wchar_t>()];
+    kernel32::MultiByteToWideChar(winapi::CP_UTF8, 0, text, text_len, wstr.as_mut_ptr(), wsize);
 
     gdi32::SetBkColor(dc, convert_color(cbg));
     gdi32::SetTextColor(dc, convert_color(cfg));
 
     gdi32::SelectObject(dc, (*font).handle as *mut raw::c_void);
-    gdi32::ExtTextOutW(dc, x, y, winapi::ETO_OPAQUE, ptr::null_mut(), wstr.as_slice()[0], wsize as u32, ptr::null_mut());
-}
-
-fn nk_gdifont_create(name: &str, size: i32) -> Box<GdiFont> {
-    Box::new(unsafe { GdiFont::new(name, size) })
+    gdi32::ExtTextOutW(dc, x, y, winapi::ETO_OPAQUE, ptr::null_mut(), wstr.as_mut_ptr(), wsize as u32, ptr::null_mut());
 }
 
 unsafe extern "C" fn nk_gdifont_get_text_width(handle: nuklear_rust::nuklear_sys::nk_handle, height: f32, text: *const i8, len: i32) -> f32 {
@@ -619,7 +669,7 @@ unsafe extern "C" fn nk_gdifont_get_text_width(handle: nuklear_rust::nuklear_sys
 	    cx:0, cy: 0
     };
     let wsize = kernel32::MultiByteToWideChar(winapi::CP_UTF8, 0, text, len, ptr::null_mut(), 0);
-    let mut wstr: Vec<winapi::wchar_t> = Vec::with_capacity(wsize as usize);
+    let mut wstr: Vec<winapi::wchar_t> = vec![0; wsize as usize];
     kernel32::MultiByteToWideChar(winapi::CP_UTF8, 0, text, len, wstr.as_mut_slice() as *mut _ as *mut winapi::wchar_t, wsize);
 
 
