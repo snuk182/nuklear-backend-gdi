@@ -169,7 +169,7 @@ impl Drawer {
 	    match msg {
 		    winapi::WM_SIZE => {
 		        let width = lparam as u16;
-		        let height = (lparam >> 2) as u16;
+		        let height = (lparam >> 16) as u16;
 		        if width as i32 != self.width || height as i32 != self.height {
 		            unsafe {
 		            	gdi32::DeleteObject(self.bitmap as *mut raw::c_void);
@@ -291,41 +291,41 @@ impl Drawer {
 		        }
 		    },
 		    winapi::WM_LBUTTONDOWN => {
-		        ctx.input_button(nuklear_rust::NkButton::NK_BUTTON_LEFT, lparam as u16 as i32, (lparam >> 2) as u16 as i32, true);
+		        ctx.input_button(nuklear_rust::NkButton::NK_BUTTON_LEFT, lparam as u16 as i32, (lparam >> 16) as u16 as i32, true);
 		        unsafe { user32::SetCapture(wnd); }
 		        return true;
 		    },
 		    winapi::WM_LBUTTONUP => {
-		        ctx.input_button(nuklear_rust::NkButton::NK_BUTTON_LEFT, lparam as u16 as i32, (lparam >> 2) as u16 as i32, false);
+		        ctx.input_button(nuklear_rust::NkButton::NK_BUTTON_LEFT, lparam as u16 as i32, (lparam >> 16) as u16 as i32, false);
 		        unsafe { user32::ReleaseCapture(); }
 		        return true;
 		    },
 		    winapi::WM_RBUTTONDOWN => {
-		        ctx.input_button(nuklear_rust::NkButton::NK_BUTTON_RIGHT, lparam as u16 as i32, (lparam >> 2) as u16 as i32, true);
+		        ctx.input_button(nuklear_rust::NkButton::NK_BUTTON_RIGHT, lparam as u16 as i32, (lparam >> 16) as u16 as i32, true);
 		        unsafe { user32::SetCapture(wnd); }
 		        return true;
 		    },
 		    winapi::WM_RBUTTONUP => {
-		        ctx.input_button(nuklear_rust::NkButton::NK_BUTTON_RIGHT, lparam as u16 as i32, (lparam >> 2) as u16 as i32, false);
+		        ctx.input_button(nuklear_rust::NkButton::NK_BUTTON_RIGHT, lparam as u16 as i32, (lparam >> 16) as u16 as i32, false);
 		        unsafe { user32::ReleaseCapture(); }
 		        return true;
 		    },
 		    winapi::WM_MBUTTONDOWN => {
-		        ctx.input_button(nuklear_rust::NkButton::NK_BUTTON_MIDDLE, lparam as u16 as i32, (lparam >> 2) as u16 as i32, true);
+		        ctx.input_button(nuklear_rust::NkButton::NK_BUTTON_MIDDLE, lparam as u16 as i32, (lparam >> 16) as u16 as i32, true);
 		        unsafe { user32::SetCapture(wnd); }
 		        return true;
 			},
 		    winapi::WM_MBUTTONUP => {
-		        ctx.input_button(nuklear_rust::NkButton::NK_BUTTON_MIDDLE, lparam as u16 as i32, (lparam >> 2) as u16 as i32, false);
+		        ctx.input_button(nuklear_rust::NkButton::NK_BUTTON_MIDDLE, lparam as u16 as i32, (lparam >> 16) as u16 as i32, false);
 		        unsafe { user32::ReleaseCapture(); }
 		        return true;
 		    },
 		    winapi::WM_MOUSEWHEEL => {
-		        ctx.input_scroll(((wparam >> 2) as u16) as f32 / winapi::WHEEL_DELTA as f32);
+		        ctx.input_scroll(((wparam >> 16) as u16) as f32 / winapi::WHEEL_DELTA as f32);
 		        return true;
 		    },
 		    winapi::WM_MOUSEMOVE => {
-		        ctx.input_motion(lparam as u16 as i32, (lparam >> 2) as u16 as i32);
+		        ctx.input_motion(lparam as u16 as i32, (lparam >> 16) as u16 as i32);
 		        return true;
 		    },
 		    _ => {}
@@ -355,45 +355,49 @@ impl Drawer {
 			            nk_gdi_stroke_rect(memory_dc, r.x() as i32, r.y() as i32, r.w() as i32, r.h() as i32, r.rounding() as u16 as i32, r.line_thickness() as i32, r.color());
 			        },
 			        nuklear_rust::NkCommandType::NK_COMMAND_RECT_FILLED => {
-			            let r = &cmd as *const _ as *const nuklear_rust::nuklear_sys::nk_command_rect_filled;
-			            nk_gdi_fill_rect(memory_dc, (*r).x as i32, (*r).y as i32, (*r).w as i32, (*r).h as i32, (*r).rounding as u16 as i32, (*r).color);
+			            let r = nuklear_rust::NkCommandRectFilled::from(cmd);
+			            nk_gdi_fill_rect(memory_dc, r.x() as i32, r.y() as i32, r.w() as i32, r.h() as i32, r.rounding() as u16 as i32, r.color());
 			        },
 			        nuklear_rust::NkCommandType::NK_COMMAND_CIRCLE => {
-			            let c = &cmd as *const _ as *const nuklear_rust::nuklear_sys::nk_command_circle;
-			            nk_gdi_stroke_circle(memory_dc, (*c).x as i32, (*c).y as i32, (*c).w as i32, (*c).h as i32, (*c).line_thickness as i32, (*c).color);
+			            let c = nuklear_rust::NkCommandCircle::from(cmd);
+			            nk_gdi_stroke_circle(memory_dc, c.x() as i32, c.y() as i32, c.w() as i32, c.h() as i32, c.line_thickness() as i32, c.color());
 			        },
 			        nuklear_rust::NkCommandType::NK_COMMAND_CIRCLE_FILLED => {
-			            let c = &cmd as *const _ as *const nuklear_rust::nuklear_sys::nk_command_circle_filled;
-			            nk_gdi_fill_circle(memory_dc, (*c).x as i32, (*c).y as i32, (*c).w as i32, (*c).h as i32, (*c).color);
+			            let c = nuklear_rust::NkCommandCircleFilled::from(cmd);
+			            nk_gdi_fill_circle(memory_dc, c.x() as i32, c.y() as i32, c.w() as i32, c.h() as i32, c.color());
 			        },
 			        nuklear_rust::NkCommandType::NK_COMMAND_TRIANGLE => {
-			            let t = &cmd as *const _ as *const nuklear_rust::nuklear_sys::nk_command_triangle;
-			            nk_gdi_stroke_triangle(memory_dc, (*t).a.x as i32, (*t).a.y as i32, (*t).b.x as i32, (*t).b.y as i32, (*t).c.x as i32, (*t).c.y as i32, (*t).line_thickness as i32, (*t).color);
+			            let t = nuklear_rust::NkCommandTriangle::from(cmd);
+			            nk_gdi_stroke_triangle(memory_dc, t.a().x as i32, t.a().y as i32, t.b().x as i32, t.b().y as i32, t.c().x as i32, t.c().y as i32, t.line_thickness() as i32, t.color());
 			        },
 			        nuklear_rust::NkCommandType::NK_COMMAND_TRIANGLE_FILLED => {
-			            let t = &cmd as *const _ as *const nuklear_rust::nuklear_sys::nk_command_triangle_filled;
-			            nk_gdi_fill_triangle(memory_dc, (*t).a.x as i32, (*t).a.y as i32, (*t).b.x as i32, (*t).b.y as i32, (*t).c.x as i32, (*t).c.y as i32, (*t).color);
+			            let t = nuklear_rust::NkCommandTriangleFilled::from(cmd);
+			            nk_gdi_fill_triangle(memory_dc, t.a().x as i32, t.a().y as i32, t.b().x as i32, t.b().y as i32, t.c().x as i32, t.c().y as i32, t.color());
 			        },
 			        nuklear_rust::NkCommandType::NK_COMMAND_POLYGON => {
-			            let p = &cmd as *const _ as *const nuklear_rust::nuklear_sys::nk_command_polygon;
-			            nk_gdi_stroke_polygon(memory_dc, &(*p).points[0], (*p).point_count as usize, (*p).line_thickness as i32, (*p).color);
+			            let p = nuklear_rust::NkCommandPolygon::from(cmd);
+			            nk_gdi_stroke_polygon(memory_dc, p.points().as_ptr(), p.points().len() as usize, p.line_thickness() as i32, p.color());
 			        },
 			        nuklear_rust::NkCommandType::NK_COMMAND_POLYGON_FILLED => {
-			            let p = &cmd as *const _ as *const nuklear_rust::nuklear_sys::nk_command_polygon_filled;
-			            nk_gdi_fill_polygon(memory_dc, &(*p).points[0], (*p).point_count as usize, (*p).color);
+			            let p = nuklear_rust::NkCommandPolygonFilled::from(cmd);
+			            nk_gdi_fill_polygon(memory_dc, p.points().as_ptr(), p.points().len() as usize, p.color());
 			        },
 			        nuklear_rust::NkCommandType::NK_COMMAND_POLYLINE => {
-			            let p = &cmd as *const _ as *const nuklear_rust::nuklear_sys::nk_command_polyline;
-			            nk_gdi_stroke_polyline(memory_dc, &(*p).points[0], (*p).point_count as usize, (*p).line_thickness as i32, (*p).color);
+			            let p = nuklear_rust::NkCommandPolyline::from(cmd);
+			            nk_gdi_stroke_polyline(memory_dc, p.points().as_ptr(), p.points().len() as usize, p.line_thickness() as i32, p.color());
 			        },
 			        nuklear_rust::NkCommandType::NK_COMMAND_TEXT => {
 			            let t = nuklear_rust::NkCommandText::from(cmd);
 			            nk_gdi_draw_text(memory_dc, t.x() as i32, t.y() as i32, t.w() as i32, t.h() as i32, t.chars().as_ptr() as *const i8, t.chars().len() as i32, (t.font()).userdata_ptr().ptr().unwrap() as *const GdiFont, t.background(), t.foreground());
 			        },
 			        nuklear_rust::NkCommandType::NK_COMMAND_CURVE => {
-			            let q = &cmd as *const _ as *const nuklear_rust::nuklear_sys::nk_command_curve;
-			            nk_gdi_stroke_curve(memory_dc, (*q).begin, (*q).ctrl[0], (*q).ctrl[1], (*q).end, (*q).line_thickness as i32, (*q).color);
+			            let q = nuklear_rust::NkCommandCurve::from(cmd);
+			            nk_gdi_stroke_curve(memory_dc, q.begin(), q.ctrl()[0], q.ctrl()[1], q.end(), q.line_thickness() as i32, q.color());
 			        },
+			        nuklear_rust::NkCommandType::NK_COMMAND_IMAGE => {
+			        	let i = nuklear_rust::NkCommandImage::from(cmd);
+			        	nk_gdi_draw_image(memory_dc, i.x() as i32, i.y() as i32, i.w() as i32, i.h() as i32, i.img(), i.col());
+			        }
 			        _ => {}
 		        }
 		    }
@@ -645,6 +649,20 @@ unsafe fn nk_gdi_stroke_curve(dc: winapi::HDC, p1: nuklear_rust::NkVec2i, p2: nu
         gdi32::SelectObject(dc, gdi32::GetStockObject(winapi::DC_PEN));
         gdi32::DeleteObject(pen as *mut raw::c_void);
     }
+}
+
+unsafe fn nk_gdi_draw_image(dc: winapi::HDC, x: i32, y: i32, w: i32, h: i32, mut img: nuklear_rust::NkImage, col: nuklear_rust::NkColor) {
+    let mut bitmap: winapi::BITMAP = mem::zeroed();
+    let mut hdc_mem: winapi::HDC = ptr::null_mut();
+    
+    let h_bitmap = img.ptr();
+    let old_bitmap = gdi32::SelectObject(hdc_mem, h_bitmap);
+
+    gdi32::GetObjectW(h_bitmap, mem::size_of_val(&bitmap) as i32, &mut bitmap as *mut _ as *mut raw::c_void);
+    gdi32::BitBlt(dc, 0, 0, bitmap.bmWidth, bitmap.bmHeight, hdc_mem, 0, 0, winapi::SRCCOPY);
+
+    gdi32::SelectObject(hdc_mem, old_bitmap);
+    gdi32::DeleteDC(hdc_mem);	
 }
 
 unsafe fn nk_gdi_draw_text(dc: winapi::HDC, x: i32, y: i32, w: i32, h: i32, text: *const i8, text_len: i32, font: *const GdiFont, cbg: nuklear_rust::NkColor, cfg: nuklear_rust::NkColor) {
