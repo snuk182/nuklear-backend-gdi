@@ -151,8 +151,9 @@ impl Drawer {
 		    let cb_stride = w as u32 * 4;
 		    
 		    for (x,y,p) in img.pixels() {
-		    	let p = p.to_rgba();
-		    	*(pv_image_bits.offset(((x * 4) + (y * cb_stride)) as isize) as *mut [u8; 4]) = p.data;
+		    	let mut p = p.to_rgba();
+		    	p.data = [p.data[2], p.data[1], p.data[0], p.data[3]];
+		    	*(pv_image_bits.offset(((x * 4) + ((h-y-1) * cb_stride)) as isize) as *mut [u8; 4]) = p.data;
 		    }
 		    /*{
 		        // couldn't extract image; delete HBITMAP
@@ -651,21 +652,20 @@ unsafe fn nk_gdi_stroke_curve(dc: winapi::HDC, p1: nuklear_rust::NkVec2i, p2: nu
     }
 }
 
-unsafe fn nk_gdi_draw_image(dc: winapi::HDC, x: i32, y: i32, w: i32, h: i32, mut img: nuklear_rust::NkImage, col: nuklear_rust::NkColor) {
+unsafe fn nk_gdi_draw_image(dc: winapi::HDC, x: i32, y: i32, w: i32, h: i32, mut img: nuklear_rust::NkImage, _: nuklear_rust::NkColor) {
     let mut bitmap: winapi::BITMAP = mem::zeroed();
-    let mut hdc_mem: winapi::HDC = ptr::null_mut();
-    
+    let hdc1 = gdi32::CreateCompatibleDC(ptr::null_mut());
     let h_bitmap = img.ptr();
-    let old_bitmap = gdi32::SelectObject(hdc_mem, h_bitmap);
-
+    
     gdi32::GetObjectW(h_bitmap, mem::size_of_val(&bitmap) as i32, &mut bitmap as *mut _ as *mut raw::c_void);
-    gdi32::BitBlt(dc, 0, 0, bitmap.bmWidth, bitmap.bmHeight, hdc_mem, 0, 0, winapi::SRCCOPY);
-
-    gdi32::SelectObject(hdc_mem, old_bitmap);
-    gdi32::DeleteDC(hdc_mem);	
+    gdi32::SelectObject(hdc1, h_bitmap);
+        
+    gdi32::StretchBlt(dc, x, y, w, h, hdc1, 0, 0, bitmap.bmWidth, bitmap.bmHeight, winapi::SRCCOPY); //TODO this may fail
+    
+    gdi32::DeleteDC(hdc1);
 }
 
-unsafe fn nk_gdi_draw_text(dc: winapi::HDC, x: i32, y: i32, w: i32, h: i32, text: *const i8, text_len: i32, font: *const GdiFont, cbg: nuklear_rust::NkColor, cfg: nuklear_rust::NkColor) {
+unsafe fn nk_gdi_draw_text(dc: winapi::HDC, x: i32, y: i32, _: i32, _: i32, text: *const i8, text_len: i32, font: *const GdiFont, cbg: nuklear_rust::NkColor, cfg: nuklear_rust::NkColor) {
     let wsize = kernel32::MultiByteToWideChar(winapi::CP_UTF8, 0, text, text_len, ptr::null_mut(), 0);
     let mut wstr = vec![0u16; wsize as usize * mem::size_of::<winapi::wchar_t>()];
     kernel32::MultiByteToWideChar(winapi::CP_UTF8, 0, text, text_len, wstr.as_mut_ptr(), wsize);
@@ -677,7 +677,7 @@ unsafe fn nk_gdi_draw_text(dc: winapi::HDC, x: i32, y: i32, w: i32, h: i32, text
     gdi32::ExtTextOutW(dc, x, y, winapi::ETO_OPAQUE, ptr::null_mut(), wstr.as_mut_ptr(), wsize as u32, ptr::null_mut());
 }
 
-unsafe extern "C" fn nk_gdifont_get_text_width(handle: nuklear_rust::nuklear_sys::nk_handle, height: f32, text: *const i8, len: i32) -> f32 {
+unsafe extern "C" fn nk_gdifont_get_text_width(handle: nuklear_rust::nuklear_sys::nk_handle, _: f32, text: *const i8, len: i32) -> f32 {
 	let font = *handle.ptr.as_ref() as *const GdiFont;
     if font.is_null() || text.is_null() {
 		return 0.0;
@@ -689,7 +689,6 @@ unsafe extern "C" fn nk_gdifont_get_text_width(handle: nuklear_rust::nuklear_sys
     let wsize = kernel32::MultiByteToWideChar(winapi::CP_UTF8, 0, text, len, ptr::null_mut(), 0);
     let mut wstr: Vec<winapi::wchar_t> = vec![0; wsize as usize];
     kernel32::MultiByteToWideChar(winapi::CP_UTF8, 0, text, len, wstr.as_mut_slice() as *mut _ as *mut winapi::wchar_t, wsize);
-
 
     if gdi32::GetTextExtentPoint32W((*font).dc, wstr.as_slice() as *const _ as *const winapi::wchar_t, wsize, &mut size) > 0 {
         size.cx as f32
