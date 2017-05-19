@@ -1,3 +1,5 @@
+#![cfg_attr(feature = "own_window", feature(drop_types_in_const))]
+
 extern crate nuklear_rust;
 
 extern crate winapi;
@@ -8,8 +10,18 @@ extern crate user32;
 #[cfg(feature = "piston_image")]
 extern crate image;
 
+#[cfg(feature = "own_window")]
+mod own_window;
+
 use std::{ptr, mem, str, slice};
 use std::os::raw;
+
+#[cfg(feature = "own_window")]
+use std::rc::Rc;
+#[cfg(feature = "own_window")]
+use std::cell::RefCell;
+#[cfg(feature = "own_window")]
+use std::sync::{Arc, Mutex};
 
 struct GdiFont {
     nk: nuklear_rust::nuklear_sys::nk_user_font,
@@ -73,10 +85,13 @@ pub struct Drawer {
     width: i32,
     height: i32,
     fonts: Vec<GdiFont>,
+    
+    allocator: Option<nuklear_rust::NkAllocator>,
+    window: Option<winapi::HWND>,
 }
 
 impl Drawer {
-	pub fn new(window_dc: winapi::HDC, width: u16, height: u16) -> Drawer {	    
+	pub fn new(window_dc: winapi::HDC, width: u16, height: u16, allocator: Option<nuklear_rust::NkAllocator>, window: Option<winapi::HWND>) -> Drawer {	    
 	    unsafe {
 		    let drawer = Drawer {
 			    bitmap: gdi32::CreateCompatibleBitmap(window_dc, width as i32, height as i32),
@@ -85,11 +100,26 @@ impl Drawer {
 			    width: width as i32,
 			    height: height as i32,
 			    fonts: Vec::new(),
+			    
+			    allocator: allocator,
+			    window: window,
 			};
 		    gdi32::SelectObject(drawer.memory_dc, drawer.bitmap as *mut raw::c_void);
 		
 		    drawer
 	    }
+	}
+	
+	pub fn install_statics(&self, context: &mut nuklear_rust::NkContext) {
+		
+	}
+	
+	pub fn allocator_mut(&mut self) -> Option<&mut nuklear_rust::NkAllocator> {
+		self.allocator.as_mut()
+	}
+	
+	pub fn window(&self) -> Option<winapi::HWND> {
+		self.window
 	}
 	
 	pub fn new_font(&mut self, name: &str, size: u16) -> nuklear_rust::NkUserFont {
@@ -343,6 +373,14 @@ impl Drawer {
 		
 			for cmd in ctx.command_iterator() {
 		        match cmd.get_type() {
+		        	nuklear_rust::NkCommandType::NK_COMMAND_ARC_FILLED => {
+		        		let a = nuklear_rust::NkCommandArcFilled::from(cmd);
+		        		nk_gdi_fill_arc(memory_dc, a.cx() as i32, a.cy() as i32, a.r() as u32, a.a()[0], a.a()[1], a.color());
+		        	}
+		        	nuklear_rust::NkCommandType::NK_COMMAND_ARC => {
+		        		let a = nuklear_rust::NkCommandArc::from(cmd);
+		        		nk_gdi_stroke_arc(memory_dc, a.cx() as i32, a.cy() as i32, a.r() as u32, a.a()[0], a.a()[1], a.line_thickness() as i32, a.color());
+		        	}
 			        nuklear_rust::NkCommandType::NK_COMMAND_SCISSOR => {
 			            let s = nuklear_rust::NkCommandScissor::from(cmd);
 			            nk_gdi_scissor(memory_dc, s.x() as f32, s.y() as f32, s.w() as f32, s.h() as f32);
@@ -600,6 +638,32 @@ unsafe fn nk_gdi_stroke_polyline(dc: winapi::HDC, pnts: *const nuklear_rust::NkV
     }
 }
 
+unsafe fn nk_gdi_fill_arc(dc: winapi::HDC, cx: i32, cy: i32, r: u32, a1: f32, a2: f32, color: nuklear_rust::NkColor) {
+	let color = convert_color(color);
+    gdi32::SetDCBrushColor(dc, color);
+    gdi32::SetDCPenColor(dc, color);
+    gdi32::AngleArc(dc, cx, cy, r, a1, a2);
+}
+
+unsafe fn nk_gdi_stroke_arc(dc: winapi::HDC, cx: i32, cy: i32, r: u32, a1: f32, a2: f32, line_thickness: i32, col: nuklear_rust::NkColor) {
+	let color = convert_color(col);
+    let mut pen = ptr::null_mut();
+    if line_thickness == 1 {
+        gdi32::SetDCPenColor(dc, color);
+    } else {
+        pen = gdi32::CreatePen(winapi::PS_SOLID, line_thickness, color);
+        gdi32::SelectObject(dc, pen as *mut raw::c_void);
+    }
+
+    gdi32::SetDCBrushColor(dc, winapi::OPAQUE as u32);
+    gdi32::AngleArc(dc, cx, cy, r, a1, a2);
+    
+    if !pen.is_null() {
+        gdi32::SelectObject(dc, gdi32::GetStockObject(winapi::DC_PEN));
+        gdi32::DeleteObject(pen as *mut raw::c_void);
+    }
+}
+
 unsafe fn nk_gdi_fill_circle(dc: winapi::HDC, x: i32, y: i32, w: i32, h: i32, col: nuklear_rust::NkColor) {
     let color = convert_color(col);
     gdi32::SetDCBrushColor(dc, color);
@@ -738,4 +802,32 @@ unsafe fn nk_gdi_clipbard_copy(text: &str) {
         }
         user32::CloseClipboard();
     }
+}
+
+#[cfg(feature = "own_window")]
+pub fn bundle_sync(window_name: &str, width: u16, height: u16, font_name: &str, font_size: u16, allocator: Option<nuklear_rust::NkAllocator>) -> (Rc<RefCell<Drawer>>, Rc<RefCell<nuklear_rust::NkContext>>, nuklear_rust::NkUserFont) {
+	let (hwnd, hdc) = own_window::create_env(window_name, width, height);
+	
+	let drawer = Rc::new(RefCell::new(Drawer::new(hdc, width, height, allocator, Some(hwnd))));
+	own_window::set_drawer_sync(Some(drawer.clone()));
+	
+	let font = drawer.borrow_mut().new_font(font_name, font_size);
+	let context = Rc::new(RefCell::new(nuklear_rust::NkContext::new(drawer.borrow_mut().allocator_mut().unwrap(), &font)));
+	own_window::set_context_sync(Some(context.clone()));
+	
+	(drawer, context, font)
+}
+
+#[cfg(feature = "own_window")]
+pub fn bundle_async(window_name: &str, width: u16, height: u16, font_name: &str, font_size: u16, allocator: Option<nuklear_rust::NkAllocator>) -> (Arc<Mutex<Drawer>>, Arc<Mutex<nuklear_rust::NkContext>>, nuklear_rust::NkUserFont) {
+	let (hwnd, hdc) = own_window::create_env(window_name, width, height);
+	
+	let drawer = Arc::new(Mutex::new(Drawer::new(hdc, width, height, allocator, Some(hwnd))));
+	own_window::set_drawer_async(Some(drawer.clone()));
+	
+	let font = drawer.lock().unwrap().new_font(font_name, font_size);
+	let context = Arc::new(Mutex::new(nuklear_rust::NkContext::new(drawer.lock().unwrap().allocator_mut().unwrap(), &font)));
+	own_window::set_context_async(Some(context.clone()));
+	
+	(drawer, context, font)
 }

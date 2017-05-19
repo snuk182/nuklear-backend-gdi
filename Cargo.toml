@@ -26,5 +26,6 @@ version = "~0.12"
 optional = true
 
 [features]
-default = ["piston_image"]
+default = ["own_window"]
 piston_image = ["image"]
+own_window = []
