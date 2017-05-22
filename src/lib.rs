@@ -13,6 +13,8 @@ extern crate image;
 #[cfg(feature = "own_window")]
 mod own_window;
 
+use nuklear_rust::*;
+use nuklear_rust::nuklear_sys as nksys;
 use std::{ptr, mem, str, slice};
 use std::os::raw;
 
@@ -26,7 +28,7 @@ use std::sync::{Arc, Mutex};
 pub type FontID = usize;
 
 struct GdiFont {
-    nk: nuklear_rust::nuklear_sys::nk_user_font,
+    nk: nksys::nk_user_font,
     height: i32,
     handle: winapi::HFONT,
     dc: winapi::HDC,
@@ -123,9 +125,9 @@ impl Drawer {
         }
     }
 
-    pub fn install_statics(&self, context: &mut nuklear_rust::NkContext) {
+    pub fn install_statics(&self, context: &mut NkContext) {
 	    unsafe {
-	    	let mut context: &mut nuklear_rust::nuklear_sys::nk_context = mem::transmute(context);
+	    	let mut context: &mut nksys::nk_context = mem::transmute(context);
 	    	context.clip.copy = Some(nk_gdi_clipbard_copy);
 	    	context.clip.paste = Some(nk_gdi_clipbard_paste);
 	    }
@@ -144,12 +146,12 @@ impl Drawer {
 
         unsafe {
             ptr::write(&mut gdifont.nk,
-                       nuklear_rust::nuklear_sys::nk_user_font {
-                           userdata: nuklear_rust::nuklear_sys::nk_handle_ptr(gdifont as *mut _ as *mut raw::c_void),
+                       nksys::nk_user_font {
+                           userdata: nksys::nk_handle_ptr(gdifont as *mut _ as *mut raw::c_void),
                            height: gdifont.height as f32,
                            width: None,
                            query: None,
-                           texture: nuklear_rust::nuklear_sys::nk_handle::default(),
+                           texture: nksys::nk_handle::default(),
                        });
 
             gdifont.nk.height = gdifont.height as f32;
@@ -161,7 +163,7 @@ impl Drawer {
         index as FontID
     }
 
-    pub fn font_by_id(&self, id: FontID) -> Option<&nuklear_rust::NkUserFont> {
+    pub fn font_by_id(&self, id: FontID) -> Option<&NkUserFont> {
         if self.fonts.len() <= id {
             return None;
         }
@@ -170,7 +172,7 @@ impl Drawer {
     }
 
     #[cfg(feature = "piston_image")]
-    pub fn add_image(&mut self, img: &image::DynamicImage) -> nuklear_rust::NkHandle {
+    pub fn add_image(&mut self, img: &image::DynamicImage) -> NkHandle {
         use image::{Pixel, GenericImage};
 
         let (w, h) = img.dimensions();
@@ -225,10 +227,10 @@ impl Drawer {
  //TODO
         }
 
-        nuklear_rust::NkHandle::from_ptr(hbmp as *mut raw::c_void)
+        NkHandle::from_ptr(hbmp as *mut raw::c_void)
     }
 
-    pub fn handle_event(&mut self, ctx: &mut nuklear_rust::NkContext, wnd: winapi::HWND, msg: winapi::UINT, wparam: winapi::WPARAM, lparam: winapi::LPARAM) -> bool {
+    pub fn handle_event(&mut self, ctx: &mut NkContext, wnd: winapi::HWND, msg: winapi::UINT, wparam: winapi::WPARAM, lparam: winapi::LPARAM) -> bool {
         match msg {
             winapi::WM_SIZE => {
                 let width = lparam as u16;
@@ -263,57 +265,57 @@ impl Drawer {
                     winapi::VK_SHIFT |
                     winapi::VK_LSHIFT |
                     winapi::VK_RSHIFT => {
-                        ctx.input_key(nuklear_rust::NkKey::NK_KEY_SHIFT, down);
+                        ctx.input_key(NkKey::NK_KEY_SHIFT, down);
                         return true;
                     }
                     winapi::VK_DELETE => {
-                        ctx.input_key(nuklear_rust::NkKey::NK_KEY_DEL, down);
+                        ctx.input_key(NkKey::NK_KEY_DEL, down);
                         return true;
                     }
                     winapi::VK_RETURN => {
-                        ctx.input_key(nuklear_rust::NkKey::NK_KEY_ENTER, down);
+                        ctx.input_key(NkKey::NK_KEY_ENTER, down);
                         return true;
                     }
                     winapi::VK_TAB => {
-                        ctx.input_key(nuklear_rust::NkKey::NK_KEY_TAB, down);
+                        ctx.input_key(NkKey::NK_KEY_TAB, down);
                         return true;
                     }
                     winapi::VK_LEFT => {
                         if ctrl {
-                            ctx.input_key(nuklear_rust::NkKey::NK_KEY_TEXT_WORD_LEFT, down);
+                            ctx.input_key(NkKey::NK_KEY_TEXT_WORD_LEFT, down);
                         } else {
-                            ctx.input_key(nuklear_rust::NkKey::NK_KEY_LEFT, down);
+                            ctx.input_key(NkKey::NK_KEY_LEFT, down);
                         }
                         return true;
                     }
                     winapi::VK_RIGHT => {
                         if ctrl {
-                            ctx.input_key(nuklear_rust::NkKey::NK_KEY_TEXT_WORD_RIGHT, down);
+                            ctx.input_key(NkKey::NK_KEY_TEXT_WORD_RIGHT, down);
                         } else {
-                            ctx.input_key(nuklear_rust::NkKey::NK_KEY_RIGHT, down);
+                            ctx.input_key(NkKey::NK_KEY_RIGHT, down);
                         }
                         return true;
                     }
                     winapi::VK_BACK => {
-                        ctx.input_key(nuklear_rust::NkKey::NK_KEY_BACKSPACE, down);
+                        ctx.input_key(NkKey::NK_KEY_BACKSPACE, down);
                         return true;
                     }
                     winapi::VK_HOME => {
-                        ctx.input_key(nuklear_rust::NkKey::NK_KEY_TEXT_START, down);
-                        ctx.input_key(nuklear_rust::NkKey::NK_KEY_SCROLL_START, down);
+                        ctx.input_key(NkKey::NK_KEY_TEXT_START, down);
+                        ctx.input_key(NkKey::NK_KEY_SCROLL_START, down);
                         return true;
                     }
                     winapi::VK_END => {
-                        ctx.input_key(nuklear_rust::NkKey::NK_KEY_TEXT_END, down);
-                        ctx.input_key(nuklear_rust::NkKey::NK_KEY_SCROLL_END, down);
+                        ctx.input_key(NkKey::NK_KEY_TEXT_END, down);
+                        ctx.input_key(NkKey::NK_KEY_SCROLL_END, down);
                         return true;
                     }
                     winapi::VK_NEXT => {
-                        ctx.input_key(nuklear_rust::NkKey::NK_KEY_SCROLL_DOWN, down);
+                        ctx.input_key(NkKey::NK_KEY_SCROLL_DOWN, down);
                         return true;
                     }
                     winapi::VK_PRIOR => {
-                        ctx.input_key(nuklear_rust::NkKey::NK_KEY_SCROLL_UP, down);
+                        ctx.input_key(NkKey::NK_KEY_SCROLL_UP, down);
                         return true;
                     }
                     _ => {}
@@ -321,31 +323,31 @@ impl Drawer {
                 match wparam as u8 as char {
                     'C' => {
                         if ctrl {
-                            ctx.input_key(nuklear_rust::NkKey::NK_KEY_COPY, down);
+                            ctx.input_key(NkKey::NK_KEY_COPY, down);
                             return true;
                         }
                     }		
                     'V' => {
                         if ctrl {
-                            ctx.input_key(nuklear_rust::NkKey::NK_KEY_PASTE, down);
+                            ctx.input_key(NkKey::NK_KEY_PASTE, down);
                             return true;
                         }
                     }
                     'X' => {
                         if ctrl {
-                            ctx.input_key(nuklear_rust::NkKey::NK_KEY_CUT, down);
+                            ctx.input_key(NkKey::NK_KEY_CUT, down);
                             return true;
                         }
                     }
                     'Z' => {
                         if ctrl {
-                            ctx.input_key(nuklear_rust::NkKey::NK_KEY_TEXT_UNDO, down);
+                            ctx.input_key(NkKey::NK_KEY_TEXT_UNDO, down);
                             return true;
                         }
                     }   
                     'R' => {
                         if ctrl {
-                            ctx.input_key(nuklear_rust::NkKey::NK_KEY_TEXT_REDO, down);
+                            ctx.input_key(NkKey::NK_KEY_TEXT_REDO, down);
                             return true;
                         }
                     }
@@ -359,7 +361,7 @@ impl Drawer {
                 }
             }
             winapi::WM_LBUTTONDOWN => {
-                ctx.input_button(nuklear_rust::NkButton::NK_BUTTON_LEFT,
+                ctx.input_button(NkButton::NK_BUTTON_LEFT,
                                  lparam as u16 as i32,
                                  (lparam >> 16) as u16 as i32,
                                  true);
@@ -369,7 +371,7 @@ impl Drawer {
                 return true;
             }
             winapi::WM_LBUTTONUP => {
-                ctx.input_button(nuklear_rust::NkButton::NK_BUTTON_LEFT,
+                ctx.input_button(NkButton::NK_BUTTON_LEFT,
                                  lparam as u16 as i32,
                                  (lparam >> 16) as u16 as i32,
                                  false);
@@ -379,7 +381,7 @@ impl Drawer {
                 return true;
             }
             winapi::WM_RBUTTONDOWN => {
-                ctx.input_button(nuklear_rust::NkButton::NK_BUTTON_RIGHT,
+                ctx.input_button(NkButton::NK_BUTTON_RIGHT,
                                  lparam as u16 as i32,
                                  (lparam >> 16) as u16 as i32,
                                  true);
@@ -389,7 +391,7 @@ impl Drawer {
                 return true;
             }
             winapi::WM_RBUTTONUP => {
-                ctx.input_button(nuklear_rust::NkButton::NK_BUTTON_RIGHT,
+                ctx.input_button(NkButton::NK_BUTTON_RIGHT,
                                  lparam as u16 as i32,
                                  (lparam >> 16) as u16 as i32,
                                  false);
@@ -399,7 +401,7 @@ impl Drawer {
                 return true;
             }
             winapi::WM_MBUTTONDOWN => {
-                ctx.input_button(nuklear_rust::NkButton::NK_BUTTON_MIDDLE,
+                ctx.input_button(NkButton::NK_BUTTON_MIDDLE,
                                  lparam as u16 as i32,
                                  (lparam >> 16) as u16 as i32,
                                  true);
@@ -409,7 +411,7 @@ impl Drawer {
                 return true;
             }
             winapi::WM_MBUTTONUP => {
-                ctx.input_button(nuklear_rust::NkButton::NK_BUTTON_MIDDLE,
+                ctx.input_button(NkButton::NK_BUTTON_MIDDLE,
                                  lparam as u16 as i32,
                                  (lparam >> 16) as u16 as i32,
                                  false);
@@ -431,7 +433,7 @@ impl Drawer {
         false
     }
 
-    pub fn render(&self, ctx: &mut nuklear_rust::NkContext, clear: nuklear_rust::NkColor) {
+    pub fn render(&self, ctx: &mut NkContext, clear: NkColor) {
         unsafe {
             let memory_dc = self.memory_dc;
             gdi32::SelectObject(memory_dc, gdi32::GetStockObject(winapi::DC_PEN));
@@ -440,8 +442,8 @@ impl Drawer {
 
             for cmd in ctx.command_iterator() {
                 match cmd.get_type() {
-                    nuklear_rust::NkCommandType::NK_COMMAND_ARC_FILLED => {
-                        let a: &nuklear_rust::NkCommandArcFilled = cmd.as_ref();
+                    NkCommandType::NK_COMMAND_ARC_FILLED => {
+                        let a: &NkCommandArcFilled = cmd.as_ref();
                         nk_gdi_fill_arc(memory_dc,
                                         a.cx() as i32,
                                         a.cy() as i32,
@@ -450,8 +452,8 @@ impl Drawer {
                                         a.a()[1],
                                         a.color());
                     }
-                    nuklear_rust::NkCommandType::NK_COMMAND_ARC => {
-                        let a: &nuklear_rust::NkCommandArc = cmd.as_ref();
+                    NkCommandType::NK_COMMAND_ARC => {
+                        let a: &NkCommandArc = cmd.as_ref();
                         nk_gdi_stroke_arc(memory_dc,
                                           a.cx() as i32,
                                           a.cy() as i32,
@@ -461,16 +463,16 @@ impl Drawer {
                                           a.line_thickness() as i32,
                                           a.color());
                     }
-                    nuklear_rust::NkCommandType::NK_COMMAND_SCISSOR => {
-                        let s: &nuklear_rust::NkCommandScissor = cmd.as_ref();
+                    NkCommandType::NK_COMMAND_SCISSOR => {
+                        let s: &NkCommandScissor = cmd.as_ref();
                         nk_gdi_scissor(memory_dc,
                                        s.x() as f32,
                                        s.y() as f32,
                                        s.w() as f32,
                                        s.h() as f32);
                     }
-                    nuklear_rust::NkCommandType::NK_COMMAND_LINE => {
-                        let l: &nuklear_rust::NkCommandLine = cmd.as_ref();
+                    NkCommandType::NK_COMMAND_LINE => {
+                        let l: &NkCommandLine = cmd.as_ref();
                         nk_gdi_stroke_line(memory_dc,
                                            l.begin().x as i32,
                                            l.begin().y as i32,
@@ -479,8 +481,8 @@ impl Drawer {
                                            l.line_thickness() as i32,
                                            l.color());
                     }
-                    nuklear_rust::NkCommandType::NK_COMMAND_RECT => {
-                        let r: &nuklear_rust::NkCommandRect = cmd.as_ref();
+                    NkCommandType::NK_COMMAND_RECT => {
+                        let r: &NkCommandRect = cmd.as_ref();
                         nk_gdi_stroke_rect(memory_dc,
                                            r.x() as i32,
                                            r.y() as i32,
@@ -490,8 +492,8 @@ impl Drawer {
                                            r.line_thickness() as i32,
                                            r.color());
                     }
-                    nuklear_rust::NkCommandType::NK_COMMAND_RECT_FILLED => {
-                        let r: &nuklear_rust::NkCommandRectFilled = cmd.as_ref();
+                    NkCommandType::NK_COMMAND_RECT_FILLED => {
+                        let r: &NkCommandRectFilled = cmd.as_ref();
                         nk_gdi_fill_rect(memory_dc,
                                          r.x() as i32,
                                          r.y() as i32,
@@ -500,8 +502,8 @@ impl Drawer {
                                          r.rounding() as u16 as i32,
                                          r.color());
                     }
-                    nuklear_rust::NkCommandType::NK_COMMAND_CIRCLE => {
-                        let c: &nuklear_rust::NkCommandCircle = cmd.as_ref();
+                    NkCommandType::NK_COMMAND_CIRCLE => {
+                        let c: &NkCommandCircle = cmd.as_ref();
                         nk_gdi_stroke_circle(memory_dc,
                                              c.x() as i32,
                                              c.y() as i32,
@@ -510,8 +512,8 @@ impl Drawer {
                                              c.line_thickness() as i32,
                                              c.color());
                     }
-                    nuklear_rust::NkCommandType::NK_COMMAND_CIRCLE_FILLED => {
-                        let c: &nuklear_rust::NkCommandCircleFilled = cmd.as_ref();
+                    NkCommandType::NK_COMMAND_CIRCLE_FILLED => {
+                        let c: &NkCommandCircleFilled = cmd.as_ref();
                         nk_gdi_fill_circle(memory_dc,
                                            c.x() as i32,
                                            c.y() as i32,
@@ -519,8 +521,8 @@ impl Drawer {
                                            c.h() as i32,
                                            c.color());
                     }
-                    nuklear_rust::NkCommandType::NK_COMMAND_TRIANGLE => {
-                        let t: &nuklear_rust::NkCommandTriangle = cmd.as_ref();
+                    NkCommandType::NK_COMMAND_TRIANGLE => {
+                        let t: &NkCommandTriangle = cmd.as_ref();
                         nk_gdi_stroke_triangle(memory_dc,
                                                t.a().x as i32,
                                                t.a().y as i32,
@@ -531,8 +533,8 @@ impl Drawer {
                                                t.line_thickness() as i32,
                                                t.color());
                     }
-                    nuklear_rust::NkCommandType::NK_COMMAND_TRIANGLE_FILLED => {
-                        let t: &nuklear_rust::NkCommandTriangleFilled = cmd.as_ref();
+                    NkCommandType::NK_COMMAND_TRIANGLE_FILLED => {
+                        let t: &NkCommandTriangleFilled = cmd.as_ref();
                         nk_gdi_fill_triangle(memory_dc,
                                              t.a().x as i32,
                                              t.a().y as i32,
@@ -542,31 +544,31 @@ impl Drawer {
                                              t.c().y as i32,
                                              t.color());
                     }
-                    nuklear_rust::NkCommandType::NK_COMMAND_POLYGON => {
-                        let p: &nuklear_rust::NkCommandPolygon = cmd.as_ref();
+                    NkCommandType::NK_COMMAND_POLYGON => {
+                        let p: &NkCommandPolygon = cmd.as_ref();
                         nk_gdi_stroke_polygon(memory_dc,
                                               p.points().as_ptr(),
                                               p.points().len() as usize,
                                               p.line_thickness() as i32,
                                               p.color());
                     }
-                    nuklear_rust::NkCommandType::NK_COMMAND_POLYGON_FILLED => {
-                        let p: &nuklear_rust::NkCommandPolygonFilled = cmd.as_ref();
+                    NkCommandType::NK_COMMAND_POLYGON_FILLED => {
+                        let p: &NkCommandPolygonFilled = cmd.as_ref();
                         nk_gdi_fill_polygon(memory_dc,
                                             p.points().as_ptr(),
                                             p.points().len() as usize,
                                             p.color());
                     }
-                    nuklear_rust::NkCommandType::NK_COMMAND_POLYLINE => {
-                        let p: &nuklear_rust::NkCommandPolyline = cmd.as_ref();
+                    NkCommandType::NK_COMMAND_POLYLINE => {
+                        let p: &NkCommandPolyline = cmd.as_ref();
                         nk_gdi_stroke_polyline(memory_dc,
                                                p.points().as_ptr(),
                                                p.points().len() as usize,
                                                p.line_thickness() as i32,
                                                p.color());
                     }
-                    nuklear_rust::NkCommandType::NK_COMMAND_TEXT => {
-                        let t: &nuklear_rust::NkCommandText = cmd.as_ref();
+                    NkCommandType::NK_COMMAND_TEXT => {
+                        let t: &NkCommandText = cmd.as_ref();
                         nk_gdi_draw_text(memory_dc,
                                          t.x() as i32,
                                          t.y() as i32,
@@ -578,8 +580,8 @@ impl Drawer {
                                          t.background(),
                                          t.foreground());
                     }
-                    nuklear_rust::NkCommandType::NK_COMMAND_CURVE => {
-                        let q: &nuklear_rust::NkCommandCurve = cmd.as_ref();
+                    NkCommandType::NK_COMMAND_CURVE => {
+                        let q: &NkCommandCurve = cmd.as_ref();
                         nk_gdi_stroke_curve(memory_dc,
                                             q.begin(),
                                             q.ctrl()[0],
@@ -588,8 +590,8 @@ impl Drawer {
                                             q.line_thickness() as i32,
                                             q.color());
                     }
-                    nuklear_rust::NkCommandType::NK_COMMAND_IMAGE => {
-                        let i: &nuklear_rust::NkCommandImage = cmd.as_ref();
+                    NkCommandType::NK_COMMAND_IMAGE => {
+                        let i: &NkCommandImage = cmd.as_ref();
                         nk_gdi_draw_image(memory_dc,
                                           i.x() as i32,
                                           i.y() as i32,
@@ -606,7 +608,7 @@ impl Drawer {
         }
     }
 
-    unsafe fn clear(&self, dc: winapi::HDC, col: nuklear_rust::NkColor) {
+    unsafe fn clear(&self, dc: winapi::HDC, col: NkColor) {
         let color = convert_color(col);
         let rect = winapi::RECT {
             left: 0,
@@ -648,7 +650,7 @@ impl Drop for Drawer {
     }
 }
 
-fn convert_color(c: nuklear_rust::NkColor) -> winapi::COLORREF {
+fn convert_color(c: NkColor) -> winapi::COLORREF {
     c.r as u32 | ((c.g as u32) << 8) | ((c.b as u32) << 16)
 }
 
@@ -661,7 +663,7 @@ unsafe fn nk_gdi_scissor(dc: winapi::HDC, x: f32, y: f32, w: f32, h: f32) {
                              (y + h + 1.0) as i32);
 }
 
-unsafe fn nk_gdi_stroke_line(dc: winapi::HDC, x0: i32, y0: i32, x1: i32, y1: i32, line_thickness: i32, col: nuklear_rust::NkColor) {
+unsafe fn nk_gdi_stroke_line(dc: winapi::HDC, x0: i32, y0: i32, x1: i32, y1: i32, line_thickness: i32, col: NkColor) {
     let color = convert_color(col);
 
     let mut pen = ptr::null_mut();
@@ -681,7 +683,7 @@ unsafe fn nk_gdi_stroke_line(dc: winapi::HDC, x0: i32, y0: i32, x1: i32, y1: i32
     }
 }
 
-unsafe fn nk_gdi_stroke_rect(dc: winapi::HDC, x: i32, y: i32, w: i32, h: i32, r: i32, line_thickness: i32, col: nuklear_rust::NkColor) {
+unsafe fn nk_gdi_stroke_rect(dc: winapi::HDC, x: i32, y: i32, w: i32, h: i32, r: i32, line_thickness: i32, col: NkColor) {
     let color = convert_color(col);
 
     let mut pen = ptr::null_mut();
@@ -705,7 +707,7 @@ unsafe fn nk_gdi_stroke_rect(dc: winapi::HDC, x: i32, y: i32, w: i32, h: i32, r:
     }
 }
 
-unsafe fn nk_gdi_fill_rect(dc: winapi::HDC, x: i32, y: i32, w: i32, h: i32, r: i32, col: nuklear_rust::NkColor) {
+unsafe fn nk_gdi_fill_rect(dc: winapi::HDC, x: i32, y: i32, w: i32, h: i32, r: i32, col: NkColor) {
     let color = convert_color(col);
 
     if r == 0 {
@@ -731,7 +733,7 @@ unsafe fn nk_gdi_fill_rect(dc: winapi::HDC, x: i32, y: i32, w: i32, h: i32, r: i
     }
 }
 
-unsafe fn nk_gdi_fill_triangle(dc: winapi::HDC, x0: i32, y0: i32, x1: i32, y1: i32, x2: i32, y2: i32, col: nuklear_rust::NkColor) {
+unsafe fn nk_gdi_fill_triangle(dc: winapi::HDC, x0: i32, y0: i32, x1: i32, y1: i32, x2: i32, y2: i32, col: NkColor) {
     let color = convert_color(col);
     let points = [winapi::POINT { x: x0, y: y0 }, winapi::POINT { x: x1, y: y1 }, winapi::POINT { x: x2, y: y2 }];
 
@@ -740,7 +742,7 @@ unsafe fn nk_gdi_fill_triangle(dc: winapi::HDC, x0: i32, y0: i32, x1: i32, y1: i
     gdi32::Polygon(dc, &points[0] as *const winapi::POINT, points.len() as i32);
 }
 
-unsafe fn nk_gdi_stroke_triangle(dc: winapi::HDC, x0: i32, y0: i32, x1: i32, y1: i32, x2: i32, y2: i32, line_thickness: i32, col: nuklear_rust::NkColor) {
+unsafe fn nk_gdi_stroke_triangle(dc: winapi::HDC, x0: i32, y0: i32, x1: i32, y1: i32, x2: i32, y2: i32, line_thickness: i32, col: NkColor) {
     let color = convert_color(col);
     let points = [winapi::POINT { x: x0, y: y0 }, winapi::POINT { x: x1, y: y1 }, winapi::POINT { x: x2, y: y2 }, winapi::POINT { x: x0, y: y0 }];
 
@@ -760,7 +762,7 @@ unsafe fn nk_gdi_stroke_triangle(dc: winapi::HDC, x0: i32, y0: i32, x1: i32, y1:
     }
 }
 
-unsafe fn nk_gdi_fill_polygon(dc: winapi::HDC, pnts: *const nuklear_rust::NkVec2i, count: usize, col: nuklear_rust::NkColor) {
+unsafe fn nk_gdi_fill_polygon(dc: winapi::HDC, pnts: *const NkVec2i, count: usize, col: NkColor) {
     if count < 1 {
         return;
     }
@@ -777,7 +779,7 @@ unsafe fn nk_gdi_fill_polygon(dc: winapi::HDC, pnts: *const nuklear_rust::NkVec2
     gdi32::Polygon(dc, &points[0], pnts.len() as i32);
 }
 
-unsafe fn nk_gdi_stroke_polygon(dc: winapi::HDC, pnts: *const nuklear_rust::NkVec2i, count: usize, line_thickness: i32, col: nuklear_rust::NkColor) {
+unsafe fn nk_gdi_stroke_polygon(dc: winapi::HDC, pnts: *const NkVec2i, count: usize, line_thickness: i32, col: NkColor) {
     let color = convert_color(col);
     let mut pen = ptr::null_mut();
     if line_thickness == 1 {
@@ -802,7 +804,7 @@ unsafe fn nk_gdi_stroke_polygon(dc: winapi::HDC, pnts: *const nuklear_rust::NkVe
     }
 }
 
-unsafe fn nk_gdi_stroke_polyline(dc: winapi::HDC, pnts: *const nuklear_rust::NkVec2i, count: usize, line_thickness: i32, col: nuklear_rust::NkColor) {
+unsafe fn nk_gdi_stroke_polyline(dc: winapi::HDC, pnts: *const NkVec2i, count: usize, line_thickness: i32, col: NkColor) {
     let color = convert_color(col);
     let mut pen = ptr::null_mut();
     if line_thickness == 1 {
@@ -826,14 +828,14 @@ unsafe fn nk_gdi_stroke_polyline(dc: winapi::HDC, pnts: *const nuklear_rust::NkV
     }
 }
 
-unsafe fn nk_gdi_fill_arc(dc: winapi::HDC, cx: i32, cy: i32, r: u32, a1: f32, a2: f32, color: nuklear_rust::NkColor) {
+unsafe fn nk_gdi_fill_arc(dc: winapi::HDC, cx: i32, cy: i32, r: u32, a1: f32, a2: f32, color: NkColor) {
     let color = convert_color(color);
     gdi32::SetDCBrushColor(dc, color);
     gdi32::SetDCPenColor(dc, color);
     gdi32::AngleArc(dc, cx, cy, r, a1, a2);
 }
 
-unsafe fn nk_gdi_stroke_arc(dc: winapi::HDC, cx: i32, cy: i32, r: u32, a1: f32, a2: f32, line_thickness: i32, col: nuklear_rust::NkColor) {
+unsafe fn nk_gdi_stroke_arc(dc: winapi::HDC, cx: i32, cy: i32, r: u32, a1: f32, a2: f32, line_thickness: i32, col: NkColor) {
     let color = convert_color(col);
     let mut pen = ptr::null_mut();
     if line_thickness == 1 {
@@ -852,14 +854,14 @@ unsafe fn nk_gdi_stroke_arc(dc: winapi::HDC, cx: i32, cy: i32, r: u32, a1: f32, 
     }
 }
 
-unsafe fn nk_gdi_fill_circle(dc: winapi::HDC, x: i32, y: i32, w: i32, h: i32, col: nuklear_rust::NkColor) {
+unsafe fn nk_gdi_fill_circle(dc: winapi::HDC, x: i32, y: i32, w: i32, h: i32, col: NkColor) {
     let color = convert_color(col);
     gdi32::SetDCBrushColor(dc, color);
     gdi32::SetDCPenColor(dc, color);
     gdi32::Ellipse(dc, x, y, x + w, y + h);
 }
 
-unsafe fn nk_gdi_stroke_circle(dc: winapi::HDC, x: i32, y: i32, w: i32, h: i32, line_thickness: i32, col: nuklear_rust::NkColor) {
+unsafe fn nk_gdi_stroke_circle(dc: winapi::HDC, x: i32, y: i32, w: i32, h: i32, line_thickness: i32, col: NkColor) {
     let color = convert_color(col);
     let mut pen = ptr::null_mut();
     if line_thickness == 1 {
@@ -878,7 +880,7 @@ unsafe fn nk_gdi_stroke_circle(dc: winapi::HDC, x: i32, y: i32, w: i32, h: i32, 
     }
 }
 
-unsafe fn nk_gdi_stroke_curve(dc: winapi::HDC, p1: nuklear_rust::NkVec2i, p2: nuklear_rust::NkVec2i, p3: nuklear_rust::NkVec2i, p4: nuklear_rust::NkVec2i, line_thickness: i32, col: nuklear_rust::NkColor) {
+unsafe fn nk_gdi_stroke_curve(dc: winapi::HDC, p1: NkVec2i, p2: NkVec2i, p3: NkVec2i, p4: NkVec2i, line_thickness: i32, col: NkColor) {
     let color = convert_color(col);
     let p = [winapi::POINT {
                  x: p1.x as i32,
@@ -914,7 +916,7 @@ unsafe fn nk_gdi_stroke_curve(dc: winapi::HDC, p1: nuklear_rust::NkVec2i, p2: nu
     }
 }
 
-unsafe fn nk_gdi_draw_image(dc: winapi::HDC, x: i32, y: i32, w: i32, h: i32, mut img: nuklear_rust::NkImage, _: nuklear_rust::NkColor) {
+unsafe fn nk_gdi_draw_image(dc: winapi::HDC, x: i32, y: i32, w: i32, h: i32, mut img: NkImage, _: NkColor) {
     let mut bitmap: winapi::BITMAP = mem::zeroed();
     let hdc1 = gdi32::CreateCompatibleDC(ptr::null_mut());
     let h_bitmap = img.ptr();
@@ -939,7 +941,7 @@ unsafe fn nk_gdi_draw_image(dc: winapi::HDC, x: i32, y: i32, w: i32, h: i32, mut
     gdi32::DeleteDC(hdc1);
 }
 
-unsafe fn nk_gdi_draw_text(dc: winapi::HDC, x: i32, y: i32, _: i32, _: i32, text: *const i8, text_len: i32, font: *const GdiFont, cbg: nuklear_rust::NkColor, cfg: nuklear_rust::NkColor) {
+unsafe fn nk_gdi_draw_text(dc: winapi::HDC, x: i32, y: i32, _: i32, _: i32, text: *const i8, text_len: i32, font: *const GdiFont, cbg: NkColor, cfg: NkColor) {
     let wsize = kernel32::MultiByteToWideChar(winapi::CP_UTF8, 0, text, text_len, ptr::null_mut(), 0);
     let mut wstr = vec![0u16; wsize as usize * mem::size_of::<winapi::wchar_t>()];
     kernel32::MultiByteToWideChar(winapi::CP_UTF8, 0, text, text_len, wstr.as_mut_ptr(), wsize);
@@ -958,7 +960,7 @@ unsafe fn nk_gdi_draw_text(dc: winapi::HDC, x: i32, y: i32, _: i32, _: i32, text
                        ptr::null_mut());
 }
 
-unsafe extern "C" fn nk_gdifont_get_text_width(handle: nuklear_rust::nuklear_sys::nk_handle, _: f32, text: *const i8, len: i32) -> f32 {
+unsafe extern "C" fn nk_gdifont_get_text_width(handle: nksys::nk_handle, _: f32, text: *const i8, len: i32) -> f32 {
     let font = *handle.ptr.as_ref() as *const GdiFont;
     if font.is_null() || text.is_null() {
         return 0.0;
@@ -984,7 +986,7 @@ unsafe extern "C" fn nk_gdifont_get_text_width(handle: nuklear_rust::nuklear_sys
     }
 }
 
-unsafe extern "C" fn nk_gdi_clipbard_paste(_: nuklear_rust::nuklear_sys::nk_handle, edit: *mut nuklear_rust::nuklear_sys::nk_text_edit) {
+unsafe extern "C" fn nk_gdi_clipbard_paste(_: nksys::nk_handle, edit: *mut nksys::nk_text_edit) {
     if user32::IsClipboardFormatAvailable(winapi::CF_UNICODETEXT) > 0 && user32::OpenClipboard(ptr::null_mut()) > 0 {
         let mem = user32::GetClipboardData(winapi::CF_UNICODETEXT);
         if !mem.is_null() {
@@ -1011,7 +1013,7 @@ unsafe extern "C" fn nk_gdi_clipbard_paste(_: nuklear_rust::nuklear_sys::nk_hand
                                                       utf8size,
                                                       ptr::null_mut(),
                                                       ptr::null_mut());
-                        let mut edit: &mut nuklear_rust::NkTextEdit = ::std::mem::transmute(edit);
+                        let mut edit: &mut NkTextEdit = ::std::mem::transmute(edit);
                         edit.paste(str::from_utf8_unchecked(utf8.as_slice()));
                     }
                     kernel32::GlobalUnlock(mem);
@@ -1022,7 +1024,7 @@ unsafe extern "C" fn nk_gdi_clipbard_paste(_: nuklear_rust::nuklear_sys::nk_hand
     }
 }
 
-unsafe extern "C" fn nk_gdi_clipbard_copy(_: nuklear_rust::nuklear_sys::nk_handle, text: *const i8, text_len: i32) {
+unsafe extern "C" fn nk_gdi_clipbard_copy(_: nksys::nk_handle, text: *const i8, text_len: i32) {
     if user32::OpenClipboard(ptr::null_mut()) > 0 {
         let wsize = kernel32::MultiByteToWideChar(winapi::CP_UTF8,
                                                   0,
@@ -1054,7 +1056,7 @@ unsafe extern "C" fn nk_gdi_clipbard_copy(_: nuklear_rust::nuklear_sys::nk_handl
 }
 
 #[cfg(feature = "own_window")]
-pub fn bundle_sync<'a>(window_name: &str, width: u16, height: u16, font_name: &str, font_size: u16, allocator: &mut nuklear_rust::NkAllocator) -> (Rc<RefCell<Drawer>>, Rc<RefCell<nuklear_rust::NkContext>>, FontID) {
+pub fn bundle_sync<'a>(window_name: &str, width: u16, height: u16, font_name: &str, font_size: u16, allocator: &mut NkAllocator) -> (Rc<RefCell<Drawer>>, Rc<RefCell<NkContext>>, FontID) {
     let (hwnd, hdc) = own_window::create_env(window_name, width, height);
 
     let drawer = Rc::new(RefCell::new(Drawer::new(hdc, width, height, Some(hwnd))));
@@ -1064,7 +1066,7 @@ pub fn bundle_sync<'a>(window_name: &str, width: u16, height: u16, font_name: &s
     let context = {
     	let drawer = drawer.borrow_mut();
         let font = drawer.font_by_id(font_id).unwrap();
-        let mut context = nuklear_rust::NkContext::new(allocator, &font);
+        let mut context = NkContext::new(allocator, &font);
         drawer.install_statics(&mut context);
         let context = Rc::new(RefCell::new(context));
         own_window::set_context_sync(Some(context.clone()));
@@ -1075,7 +1077,7 @@ pub fn bundle_sync<'a>(window_name: &str, width: u16, height: u16, font_name: &s
 }
 
 #[cfg(feature = "own_window")]
-pub fn bundle_async<'a>(window_name: &str, width: u16, height: u16, font_name: &str, font_size: u16, allocator: &mut nuklear_rust::NkAllocator) -> (Arc<Mutex<Drawer>>, Arc<Mutex<nuklear_rust::NkContext>>, FontID) {
+pub fn bundle_async<'a>(window_name: &str, width: u16, height: u16, font_name: &str, font_size: u16, allocator: &mut NkAllocator) -> (Arc<Mutex<Drawer>>, Arc<Mutex<NkContext>>, FontID) {
     let (hwnd, hdc) = own_window::create_env(window_name, width, height);
 
     let drawer = Arc::new(Mutex::new(Drawer::new(hdc, width, height, Some(hwnd))));
@@ -1085,7 +1087,7 @@ pub fn bundle_async<'a>(window_name: &str, width: u16, height: u16, font_name: &
     let context = {
     	let drawer = drawer.lock().unwrap();
         let font = drawer.font_by_id(font_id).unwrap();
-        let mut context = nuklear_rust::NkContext::new(allocator, &font);
+        let mut context = NkContext::new(allocator, &font);
         drawer.install_statics(&mut context);
         let context = Arc::new(Mutex::new(context));
         own_window::set_context_async(Some(context.clone()));
