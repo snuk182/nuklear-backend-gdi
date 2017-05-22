@@ -9,7 +9,7 @@ extern crate user32;
 
 #[cfg(feature = "piston_image")]
 extern crate image;
-
+#[cfg(feature = "own_window")]
 #[cfg(feature = "own_window")]
 mod own_window;
 
@@ -17,13 +17,6 @@ use nuklear_rust::*;
 use nuklear_rust::nuklear_sys as nksys;
 use std::{ptr, mem, str, slice};
 use std::os::raw;
-
-#[cfg(feature = "own_window")]
-use std::rc::Rc;
-#[cfg(feature = "own_window")]
-use std::cell::RefCell;
-#[cfg(feature = "own_window")]
-use std::sync::{Arc, Mutex};
 
 pub type FontID = usize;
 
@@ -126,15 +119,35 @@ impl Drawer {
     }
 
     pub fn install_statics(&self, context: &mut NkContext) {
-	    unsafe {
-	    	let mut context: &mut nksys::nk_context = mem::transmute(context);
-	    	context.clip.copy = Some(nk_gdi_clipbard_copy);
-	    	context.clip.paste = Some(nk_gdi_clipbard_paste);
-	    }
+        unsafe {
+            let mut context: &mut nksys::nk_context = mem::transmute(context);
+            context.clip.copy = Some(nk_gdi_clipbard_copy);
+            context.clip.paste = Some(nk_gdi_clipbard_paste);
+        }
     }
 
     pub fn window(&self) -> Option<winapi::HWND> {
         self.window
+    }
+
+    pub fn process_events(&mut self, ctx: &mut NkContext) -> bool {
+        unsafe {
+            let mut msg: winapi::MSG = mem::zeroed();
+            ctx.input_begin();
+
+            if user32::GetMessageW(&mut msg, ptr::null_mut(), 0, 0) <= 0 {
+                return false;
+            } else {
+                user32::TranslateMessage(&mut msg);
+                user32::DispatchMessageW(&mut msg);
+            }
+
+            #[cfg(feature = "own_window")]
+            own_window::process_events(self, ctx);
+
+            ctx.input_end();
+            return true;
+        }
     }
 
     pub fn new_font(&mut self, name: &str, size: u16) -> FontID {
@@ -156,8 +169,6 @@ impl Drawer {
 
             gdifont.nk.height = gdifont.height as f32;
             gdifont.nk.width = Some(nk_gdifont_get_text_width);
-
-            //::std::mem::transmute(&mut gdifont.nk)
         }
 
         index as FontID
@@ -209,7 +220,7 @@ impl Drawer {
             /*if hbmp.is_null() {
 		        return;
 		    }*/
- //TODO
+            //TODO
 
             let cb_stride = w as u32 * 4;
 
@@ -224,7 +235,7 @@ impl Drawer {
 		        hbmp = ptr::null_mut();
 		        return;
 		    }*/
- //TODO
+            //TODO
         }
 
         NkHandle::from_ptr(hbmp as *mut raw::c_void)
@@ -1026,24 +1037,14 @@ unsafe extern "C" fn nk_gdi_clipbard_paste(_: nksys::nk_handle, edit: *mut nksys
 
 unsafe extern "C" fn nk_gdi_clipbard_copy(_: nksys::nk_handle, text: *const i8, text_len: i32) {
     if user32::OpenClipboard(ptr::null_mut()) > 0 {
-        let wsize = kernel32::MultiByteToWideChar(winapi::CP_UTF8,
-                                                  0,
-                                                  text,
-                                                  text_len,
-                                                  ptr::null_mut(),
-                                                  0);
+        let wsize = kernel32::MultiByteToWideChar(winapi::CP_UTF8, 0, text, text_len, ptr::null_mut(), 0);
         if wsize > 0 {
             let mem = kernel32::GlobalAlloc(2,
                                             ((wsize + 1) * mem::size_of::<winapi::wchar_t>() as i32) as u64); // 2 = GMEM_MOVEABLE
             if !mem.is_null() {
                 let wstr = kernel32::GlobalLock(mem);
                 if !wstr.is_null() {
-                    kernel32::MultiByteToWideChar(winapi::CP_UTF8,
-                                                  0,
-                                                  text,
-                                                  text_len,
-                                                  wstr as *mut u16,
-                                                  wsize);
+                    kernel32::MultiByteToWideChar(winapi::CP_UTF8, 0, text, text_len, wstr as *mut u16, wsize);
                     *(wstr.offset(wsize as isize) as *mut u8) = 0;
                     kernel32::GlobalUnlock(mem);
 
@@ -1056,43 +1057,17 @@ unsafe extern "C" fn nk_gdi_clipbard_copy(_: nksys::nk_handle, text: *const i8, 
 }
 
 #[cfg(feature = "own_window")]
-pub fn bundle_sync<'a>(window_name: &str, width: u16, height: u16, font_name: &str, font_size: u16, allocator: &mut NkAllocator) -> (Rc<RefCell<Drawer>>, Rc<RefCell<NkContext>>, FontID) {
+pub fn bundle<'a>(window_name: &str, width: u16, height: u16, font_name: &str, font_size: u16, allocator: &mut NkAllocator) -> (Drawer, NkContext, FontID) {
     let (hwnd, hdc) = own_window::create_env(window_name, width, height);
 
-    let drawer = Rc::new(RefCell::new(Drawer::new(hdc, width, height, Some(hwnd))));
-    own_window::set_drawer_sync(Some(drawer.clone()));
-
-    let font_id = drawer.borrow_mut().new_font(font_name, font_size);
-    let context = {
-    	let drawer = drawer.borrow_mut();
-        let font = drawer.font_by_id(font_id).unwrap();
-        let mut context = NkContext::new(allocator, &font);
-        drawer.install_statics(&mut context);
-        let context = Rc::new(RefCell::new(context));
-        own_window::set_context_sync(Some(context.clone()));
-        context
+    let mut drawer = Drawer::new(hdc, width, height, Some(hwnd));
+    
+    let font_id = drawer.new_font(font_name, font_size);
+    let mut context = {
+	    let font = drawer.font_by_id(font_id).unwrap();
+	    NkContext::new(allocator, &font)
     };
-
-    (drawer, context, font_id as FontID)
-}
-
-#[cfg(feature = "own_window")]
-pub fn bundle_async<'a>(window_name: &str, width: u16, height: u16, font_name: &str, font_size: u16, allocator: &mut NkAllocator) -> (Arc<Mutex<Drawer>>, Arc<Mutex<NkContext>>, FontID) {
-    let (hwnd, hdc) = own_window::create_env(window_name, width, height);
-
-    let drawer = Arc::new(Mutex::new(Drawer::new(hdc, width, height, Some(hwnd))));
-    own_window::set_drawer_async(Some(drawer.clone()));
-
-    let font_id = drawer.lock().unwrap().new_font(font_name, font_size);
-    let context = {
-    	let drawer = drawer.lock().unwrap();
-        let font = drawer.font_by_id(font_id).unwrap();
-        let mut context = NkContext::new(allocator, &font);
-        drawer.install_statics(&mut context);
-        let context = Arc::new(Mutex::new(context));
-        own_window::set_context_async(Some(context.clone()));
-        context
-    };
-
+    drawer.install_statics(&mut context);
+    
     (drawer, context, font_id as FontID)
 }
