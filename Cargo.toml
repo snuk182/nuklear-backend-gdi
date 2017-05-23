@@ -19,7 +19,7 @@ user32-sys = "~0.2"
 gdi32-sys = "~0.2"
 kernel32-sys = "~0.2"
 winapi = "~0.2"
-nuklear-rust = {version = "~0.3", path = "../nuklear-rust"}
+nuklear-rust = "~0.3"
 
 [dependencies.image]
 version = "~0.12"
