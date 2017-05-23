@@ -10,7 +10,6 @@ extern crate user32;
 #[cfg(feature = "piston_image")]
 extern crate image;
 #[cfg(feature = "own_window")]
-#[cfg(feature = "own_window")]
 mod own_window;
 
 use nuklear_rust::*;
