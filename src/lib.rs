@@ -740,6 +740,7 @@ unsafe fn nk_gdi_fill_rect(dc: winapi::HDC, x: i32, y: i32, w: i32, h: i32, r: i
         gdi32::SetDCBrushColor(dc, color);
         gdi32::RoundRect(dc, x, y, x + w, y + h, r, r);
     }
+    gdi32::SetDCBrushColor(dc, color);
 }
 
 unsafe fn nk_gdi_fill_triangle(dc: winapi::HDC, x0: i32, y0: i32, x1: i32, y1: i32, x2: i32, y2: i32, col: NkColor) {
@@ -854,7 +855,6 @@ unsafe fn nk_gdi_stroke_arc(dc: winapi::HDC, cx: i32, cy: i32, r: u32, a1: f32, 
         gdi32::SelectObject(dc, pen as *mut raw::c_void);
     }
 
-    gdi32::SetDCBrushColor(dc, winapi::OPAQUE as u32);
     gdi32::AngleArc(dc, cx, cy, r, a1, a2);
 
     if !pen.is_null() {
@@ -880,7 +880,6 @@ unsafe fn nk_gdi_stroke_circle(dc: winapi::HDC, x: i32, y: i32, w: i32, h: i32, 
         gdi32::SelectObject(dc, pen as *mut raw::c_void);
     }
 
-    //gdi32::SetDCBrushColor(dc, winapi::OPAQUE as u32);
     gdi32::Ellipse(dc, x, y, x + w, y + h);
 
     if !pen.is_null() {
@@ -916,7 +915,6 @@ unsafe fn nk_gdi_stroke_curve(dc: winapi::HDC, p1: NkVec2i, p2: NkVec2i, p3: NkV
         gdi32::SelectObject(dc, pen as *mut raw::c_void);
     }
 
-    //gdi32::SetDCBrushColor(dc, winapi::OPAQUE as u32);
     gdi32::PolyBezier(dc, &p[0], p.len() as u32);
 
     if !pen.is_null() {
@@ -975,6 +973,7 @@ unsafe fn nk_gdi_draw_text(dc: winapi::HDC, x: i32, y: i32, _: i32, _: i32, text
                        wstr.as_mut_ptr(),
                        wsize as u32,
                        ptr::null_mut());
+    gdi32::SetDCBrushColor(dc, convert_color(cbg));
 }
 
 unsafe extern "C" fn nk_gdifont_get_text_width(handle: nksys::nk_handle, _: f32, text: *const i8, len: i32) -> f32 {
