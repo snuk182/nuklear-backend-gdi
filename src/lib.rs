@@ -268,8 +268,8 @@ impl Drawer {
             winapi::WM_KEYUP |
             winapi::WM_SYSKEYDOWN |
             winapi::WM_SYSKEYUP => {
-                let down = !((lparam >> 31) & 1) > 0;
-                let ctrl = unsafe { user32::GetKeyState(winapi::VK_CONTROL) & (1 << 15) > 0 };
+                let down = ((lparam >> 31) & 1) == 0;
+                let ctrl = unsafe { (user32::GetKeyState(winapi::VK_CONTROL) & (1 << 15)) != 0 };
 
                 match wparam as i32 {
                     winapi::VK_SHIFT |
@@ -448,7 +448,7 @@ impl Drawer {
             let memory_dc = self.memory_dc;
             gdi32::SelectObject(memory_dc, gdi32::GetStockObject(winapi::DC_PEN));
             gdi32::SelectObject(memory_dc, gdi32::GetStockObject(winapi::DC_BRUSH));
-            self.clear(memory_dc, clear);
+            self.clear_dc(memory_dc, clear);
 
             for cmd in ctx.command_iterator() {
                 match cmd.get_type() {
@@ -618,7 +618,7 @@ impl Drawer {
         }
     }
 
-    unsafe fn clear(&self, dc: winapi::HDC, col: NkColor) {
+    unsafe fn clear_dc(&self, dc: winapi::HDC, col: NkColor) {
         let color = convert_color(col);
         let rect = winapi::RECT {
             left: 0,
@@ -704,7 +704,6 @@ unsafe fn nk_gdi_stroke_rect(dc: winapi::HDC, x: i32, y: i32, w: i32, h: i32, r:
         gdi32::SelectObject(dc, pen as *mut raw::c_void);
     }
 
-    gdi32::SetDCBrushColor(dc, winapi::OPAQUE as u32);
     if r == 0 {
         gdi32::Rectangle(dc, x, y, x + w, y + h);
     } else {
@@ -881,7 +880,7 @@ unsafe fn nk_gdi_stroke_circle(dc: winapi::HDC, x: i32, y: i32, w: i32, h: i32, 
         gdi32::SelectObject(dc, pen as *mut raw::c_void);
     }
 
-    gdi32::SetDCBrushColor(dc, winapi::OPAQUE as u32);
+    //gdi32::SetDCBrushColor(dc, winapi::OPAQUE as u32);
     gdi32::Ellipse(dc, x, y, x + w, y + h);
 
     if !pen.is_null() {
@@ -917,7 +916,7 @@ unsafe fn nk_gdi_stroke_curve(dc: winapi::HDC, p1: NkVec2i, p2: NkVec2i, p3: NkV
         gdi32::SelectObject(dc, pen as *mut raw::c_void);
     }
 
-    gdi32::SetDCBrushColor(dc, winapi::OPAQUE as u32);
+    //gdi32::SetDCBrushColor(dc, winapi::OPAQUE as u32);
     gdi32::PolyBezier(dc, &p[0], p.len() as u32);
 
     if !pen.is_null() {
@@ -934,19 +933,27 @@ unsafe fn nk_gdi_draw_image(dc: winapi::HDC, x: i32, y: i32, w: i32, h: i32, mut
     gdi32::GetObjectW(h_bitmap,
                       mem::size_of_val(&bitmap) as i32,
                       &mut bitmap as *mut _ as *mut raw::c_void);
+
     gdi32::SelectObject(hdc1, h_bitmap);
 
-    gdi32::StretchBlt(dc,
-                      x,
-                      y,
-                      w,
-                      h,
-                      hdc1,
-                      0,
-                      0,
-                      bitmap.bmWidth,
-                      bitmap.bmHeight,
-                      winapi::SRCCOPY); //TODO this may fail
+    let blendfunc = winapi::BLENDFUNCTION {
+        BlendOp: 0,
+        BlendFlags: 0,
+        SourceConstantAlpha: 255,
+        AlphaFormat: 1,
+    };
+
+    gdi32::GdiAlphaBlend(dc,
+                         x,
+                         y,
+                         w,
+                         h,
+                         hdc1,
+                         0,
+                         0,
+                         bitmap.bmWidth,
+                         bitmap.bmHeight,
+                         blendfunc);
 
     gdi32::DeleteDC(hdc1);
 }
@@ -1014,7 +1021,7 @@ unsafe extern "C" fn nk_gdi_clipbard_paste(_: nksys::nk_handle, edit: *mut nksys
                                                                  ptr::null_mut(),
                                                                  ptr::null_mut());
                     if utf8size > 0 {
-                        let mut utf8: Vec<u8> = Vec::with_capacity(utf8size as usize);
+                        let mut utf8: Vec<u8> = vec![0; utf8size as usize];
                         kernel32::WideCharToMultiByte(winapi::CP_UTF8,
                                                       0,
                                                       wstr as *const u16,
@@ -1044,7 +1051,7 @@ unsafe extern "C" fn nk_gdi_clipbard_copy(_: nksys::nk_handle, text: *const i8, 
                 let wstr = kernel32::GlobalLock(mem);
                 if !wstr.is_null() {
                     kernel32::MultiByteToWideChar(winapi::CP_UTF8, 0, text, text_len, wstr as *mut u16, wsize);
-                    *(wstr.offset(wsize as isize) as *mut u8) = 0;
+                    *(wstr.offset((wsize * mem::size_of::<u16>() as i32) as isize) as *mut u8) = 0;
                     kernel32::GlobalUnlock(mem);
 
                     user32::SetClipboardData(winapi::CF_UNICODETEXT, mem);
@@ -1060,13 +1067,13 @@ pub fn bundle<'a>(window_name: &str, width: u16, height: u16, font_name: &str, f
     let (hwnd, hdc) = own_window::create_env(window_name, width, height);
 
     let mut drawer = Drawer::new(hdc, width, height, Some(hwnd));
-    
+
     let font_id = drawer.new_font(font_name, font_size);
     let mut context = {
-	    let font = drawer.font_by_id(font_id).unwrap();
-	    NkContext::new(allocator, &font)
+        let font = drawer.font_by_id(font_id).unwrap();
+        NkContext::new(allocator, &font)
     };
     drawer.install_statics(&mut context);
-    
+
     (drawer, context, font_id as FontID)
 }
