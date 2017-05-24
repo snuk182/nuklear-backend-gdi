@@ -366,7 +366,7 @@ impl Drawer {
             }
             winapi::WM_CHAR => {
                 if wparam >= 32 {
-                    ctx.input_unicode(wparam as u8 as char);
+                    unsafe { ctx.input_unicode(::std::char::from_u32_unchecked(wparam as u32)); }
                     return true;
                 }
             }
@@ -1040,16 +1040,17 @@ unsafe extern "C" fn nk_gdi_clipbard_paste(_: nksys::nk_handle, edit: *mut nksys
     }
 }
 
-unsafe extern "C" fn nk_gdi_clipbard_copy(_: nksys::nk_handle, text: *const i8, text_len: i32) {
+unsafe extern "C" fn nk_gdi_clipbard_copy(_: nksys::nk_handle, text: *const i8, _: i32) {
     if user32::OpenClipboard(ptr::null_mut()) > 0 {
-        let wsize = kernel32::MultiByteToWideChar(winapi::CP_UTF8, 0, text, text_len, ptr::null_mut(), 0);
+    	let str_size = ::std::ffi::CStr::from_ptr(text).to_bytes().len() as i32;
+        let wsize = kernel32::MultiByteToWideChar(winapi::CP_UTF8, 0, text, str_size, ptr::null_mut(), 0);
         if wsize > 0 {
             let mem = kernel32::GlobalAlloc(2,
                                             ((wsize + 1) * mem::size_of::<winapi::wchar_t>() as i32) as u64); // 2 = GMEM_MOVEABLE
             if !mem.is_null() {
                 let wstr = kernel32::GlobalLock(mem);
                 if !wstr.is_null() {
-                    kernel32::MultiByteToWideChar(winapi::CP_UTF8, 0, text, text_len, wstr as *mut u16, wsize);
+                    kernel32::MultiByteToWideChar(winapi::CP_UTF8, 0, text, str_size, wstr as *mut u16, wsize);
                     *(wstr.offset((wsize * mem::size_of::<u16>() as i32) as isize) as *mut u8) = 0;
                     kernel32::GlobalUnlock(mem);
 
