@@ -14,7 +14,7 @@ mod own_window;
 
 use nuklear_rust::*;
 use nuklear_rust::nuklear_sys as nksys;
-use std::{ptr, mem, str, slice};
+use std::{ptr, mem, str, slice, ffi};
 use std::os::raw;
 
 pub type FontID = usize;
@@ -1004,13 +1004,13 @@ unsafe extern "C" fn nk_gdifont_get_text_width(handle: nksys::nk_handle, _: f32,
 
 unsafe extern "C" fn nk_gdi_clipbard_paste(_: nksys::nk_handle, edit: *mut nksys::nk_text_edit) {
     if user32::IsClipboardFormatAvailable(winapi::CF_UNICODETEXT) > 0 && user32::OpenClipboard(ptr::null_mut()) > 0 {
-        let mem = user32::GetClipboardData(winapi::CF_UNICODETEXT);
-        if !mem.is_null() {
-            let size = kernel32::GlobalSize(mem) - 1;
+        let clip = user32::GetClipboardData(winapi::CF_UNICODETEXT);
+        if !clip.is_null() {
+            let size = kernel32::GlobalSize(clip) - 1;
             if size > 0 {
-                let wstr = kernel32::GlobalLock(mem);
+                let wstr = kernel32::GlobalLock(clip);
                 if !wstr.is_null() {
-                    let size = (size / mem::size_of::<winapi::wchar_t>() as u64) as i32;
+                    let size = (size / mem::size_of::<winapi::wchar_t>() as winapi::SIZE_T) as i32;
                     let utf8size = kernel32::WideCharToMultiByte(winapi::CP_UTF8,
                                                                  0,
                                                                  wstr as *const u16,
@@ -1032,7 +1032,7 @@ unsafe extern "C" fn nk_gdi_clipbard_paste(_: nksys::nk_handle, edit: *mut nksys
                         let mut edit: &mut NkTextEdit = ::std::mem::transmute(edit);
                         edit.paste(str::from_utf8_unchecked(utf8.as_slice()));
                     }
-                    kernel32::GlobalUnlock(mem);
+                    kernel32::GlobalUnlock(clip);
                 }
             }
         }
@@ -1042,11 +1042,11 @@ unsafe extern "C" fn nk_gdi_clipbard_paste(_: nksys::nk_handle, edit: *mut nksys
 
 unsafe extern "C" fn nk_gdi_clipbard_copy(_: nksys::nk_handle, text: *const i8, _: i32) {
     if user32::OpenClipboard(ptr::null_mut()) > 0 {
-    	let str_size = ::std::ffi::CStr::from_ptr(text).to_bytes().len() as i32;
+    	let str_size = ffi::CStr::from_ptr(text).to_bytes().len() as i32;
         let wsize = kernel32::MultiByteToWideChar(winapi::CP_UTF8, 0, text, str_size, ptr::null_mut(), 0);
         if wsize > 0 {
             let mem = kernel32::GlobalAlloc(2,
-                                            ((wsize + 1) * mem::size_of::<winapi::wchar_t>() as i32) as u64); // 2 = GMEM_MOVEABLE
+                                            ((wsize + 1) as usize * mem::size_of::<winapi::wchar_t>()) as winapi::SIZE_T); // 2 = GMEM_MOVEABLE
             if !mem.is_null() {
                 let wstr = kernel32::GlobalLock(mem);
                 if !wstr.is_null() {
