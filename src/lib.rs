@@ -236,7 +236,6 @@ impl Drawer {
             for x in 0..w {
                 for y in 0..h {
                     let p = img.get_pixel_mut(x, y);
-                    // mem::swap(&mut p[0], &mut p[2]); // bck is stupid
                     let r = p[0];
                     let b = p[2];
                     p[0] = b;
@@ -251,9 +250,8 @@ impl Drawer {
 		        return;
 		    }*/
             //TODO
+            Handle::from_ptr(hbmp as *mut ::std::os::raw::c_void)
         }
-
-        Handle::from_ptr(hbmp as *mut ::std::os::raw::c_void)
     }
 
     pub fn handle_event(&mut self, ctx: &mut Context, wnd: windef::HWND, msg: minwindef::UINT, wparam: minwindef::WPARAM, lparam: minwindef::LPARAM) -> bool {
