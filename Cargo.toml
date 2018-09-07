@@ -1,6 +1,6 @@
 [package]
 name = "nuklear-backend-gdi"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Serhii Plyhun <snuk188@gmail.com>"]
 keywords = ["widgets", "gui", "interface", "graphics", "gdi"]
 description = "A WinAPI GDI drawing backend for Rust wrapper for Nuklear 2D GUI library"
@@ -16,7 +16,7 @@ path = "src/lib.rs"
 [dependencies]
 log = "~0.3"
 winapi = {version = "~0.3", features = ["windef", "minwindef", "winuser", "winbase", "wingdi", "winnls", "stringapiset", "libloaderapi", "errhandlingapi"]}
-nuklear-rust = "~0.4"
+nuklear-rust = "~0.5"
 
 [dependencies.image]
 version = "~0.19"
