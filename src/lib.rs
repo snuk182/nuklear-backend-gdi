@@ -1,12 +1,8 @@
-#![cfg_attr(feature = "cargo-clippy", allow(cast_ptr_alignment))] // API requirement
-#![cfg_attr(feature = "cargo-clippy", allow(cast_lossless))] // API requirement
-#![cfg_attr(feature = "cargo-clippy", allow(redundant_field_names))] // for conststency
-#![cfg_attr(feature = "cargo-clippy", allow(too_many_arguments))] // TODO later
-#![cfg_attr(feature = "cargo-clippy", allow(many_single_char_names))] // TODO later
-
-extern crate nuklear;
-
-extern crate winapi;
+#![cfg_attr(feature = "cargo-clippy", allow(clippy::cast_ptr_alignment))] // API requirement
+#![cfg_attr(feature = "cargo-clippy", allow(clippy::cast_lossless))] // API requirement
+#![cfg_attr(feature = "cargo-clippy", allow(clippy::redundant_field_names))] // for conststency
+#![cfg_attr(feature = "cargo-clippy", allow(clippy::too_many_arguments))] // TODO later
+#![cfg_attr(feature = "cargo-clippy", allow(clippy::many_single_char_names))] // TODO later
 
 use winapi::ctypes;
 use winapi::ctypes::c_void;
@@ -23,7 +19,7 @@ use winapi::um::winnls;
 use winapi::um::winuser;
 
 #[cfg(feature = "piston_image")]
-extern crate image;
+pub use image;
 #[cfg(feature = "own_window")]
 mod own_window;
 
@@ -200,7 +196,7 @@ impl Drawer {
 
     #[cfg(feature = "piston_image")]
     pub fn add_image(&mut self, img: &image::DynamicImage) -> Handle {
-        use image::GenericImage;
+        use image::GenericImageView;
 
         let (w, h) = img.dimensions();
 
@@ -244,11 +240,11 @@ impl Drawer {
             }
             ptr::copy(img.into_raw().as_ptr(), pv_image_bits as *mut u8, (w * h * 4) as usize);
             /*{
-		        // couldn't extract image; delete HBITMAP
-		        wingdi::DeleteObject(hbmp as *mut c_void);
-		        hbmp = ptr::null_mut();
-		        return;
-		    }*/
+                // couldn't extract image; delete HBITMAP
+                wingdi::DeleteObject(hbmp as *mut c_void);
+                hbmp = ptr::null_mut();
+                return;
+            }*/
             //TODO
             Handle::from_ptr(hbmp as *mut ::std::os::raw::c_void)
         }
@@ -284,57 +280,57 @@ impl Drawer {
 
                 match wparam as i32 {
                     winuser::VK_SHIFT | winuser::VK_LSHIFT | winuser::VK_RSHIFT => {
-                        ctx.input_key(Key::NK_KEY_SHIFT, down);
+                        ctx.input_key(Key::Shift, down);
                         return true;
                     }
                     winuser::VK_DELETE => {
-                        ctx.input_key(Key::NK_KEY_DEL, down);
+                        ctx.input_key(Key::Del, down);
                         return true;
                     }
                     winuser::VK_RETURN => {
-                        ctx.input_key(Key::NK_KEY_ENTER, down);
+                        ctx.input_key(Key::Enter, down);
                         return true;
                     }
                     winuser::VK_TAB => {
-                        ctx.input_key(Key::NK_KEY_TAB, down);
+                        ctx.input_key(Key::Tab, down);
                         return true;
                     }
                     winuser::VK_LEFT => {
                         if ctrl {
-                            ctx.input_key(Key::NK_KEY_TEXT_WORD_LEFT, down);
+                            ctx.input_key(Key::TextWordLeft, down);
                         } else {
-                            ctx.input_key(Key::NK_KEY_LEFT, down);
+                            ctx.input_key(Key::Left, down);
                         }
                         return true;
                     }
                     winuser::VK_RIGHT => {
                         if ctrl {
-                            ctx.input_key(Key::NK_KEY_TEXT_WORD_RIGHT, down);
+                            ctx.input_key(Key::TextWordRight, down);
                         } else {
-                            ctx.input_key(Key::NK_KEY_RIGHT, down);
+                            ctx.input_key(Key::Right, down);
                         }
                         return true;
                     }
                     winuser::VK_BACK => {
-                        ctx.input_key(Key::NK_KEY_BACKSPACE, down);
+                        ctx.input_key(Key::Backspace, down);
                         return true;
                     }
                     winuser::VK_HOME => {
-                        ctx.input_key(Key::NK_KEY_TEXT_START, down);
-                        ctx.input_key(Key::NK_KEY_SCROLL_START, down);
+                        ctx.input_key(Key::TextStart, down);
+                        ctx.input_key(Key::ScrollStart, down);
                         return true;
                     }
                     winuser::VK_END => {
-                        ctx.input_key(Key::NK_KEY_TEXT_END, down);
-                        ctx.input_key(Key::NK_KEY_SCROLL_END, down);
+                        ctx.input_key(Key::TextEnd, down);
+                        ctx.input_key(Key::ScrollEnd, down);
                         return true;
                     }
                     winuser::VK_NEXT => {
-                        ctx.input_key(Key::NK_KEY_SCROLL_DOWN, down);
+                        ctx.input_key(Key::ScrollDown, down);
                         return true;
                     }
                     winuser::VK_PRIOR => {
-                        ctx.input_key(Key::NK_KEY_SCROLL_UP, down);
+                        ctx.input_key(Key::ScrollUp, down);
                         return true;
                     }
                     _ => {}
@@ -342,31 +338,31 @@ impl Drawer {
                 match wparam as u8 as char {
                     'C' => {
                         if ctrl {
-                            ctx.input_key(Key::NK_KEY_COPY, down);
+                            ctx.input_key(Key::Copy, down);
                             return true;
                         }
                     }
                     'V' => {
                         if ctrl {
-                            ctx.input_key(Key::NK_KEY_PASTE, down);
+                            ctx.input_key(Key::Paste, down);
                             return true;
                         }
                     }
                     'X' => {
                         if ctrl {
-                            ctx.input_key(Key::NK_KEY_CUT, down);
+                            ctx.input_key(Key::Cut, down);
                             return true;
                         }
                     }
                     'Z' => {
                         if ctrl {
-                            ctx.input_key(Key::NK_KEY_TEXT_UNDO, down);
+                            ctx.input_key(Key::TextUndo, down);
                             return true;
                         }
                     }
                     'R' => {
                         if ctrl {
-                            ctx.input_key(Key::NK_KEY_TEXT_REDO, down);
+                            ctx.input_key(Key::TextRedo, down);
                             return true;
                         }
                     }
@@ -382,49 +378,52 @@ impl Drawer {
                 }
             }
             winuser::WM_LBUTTONDOWN => {
-                ctx.input_button(Button::NK_BUTTON_LEFT, lparam as u16 as i32, (lparam >> 16) as u16 as i32, true);
+                ctx.input_button(Button::Left, lparam as u16 as i32, (lparam >> 16) as u16 as i32, true);
                 unsafe {
                     winuser::SetCapture(wnd);
                 }
                 return true;
             }
             winuser::WM_LBUTTONUP => {
-                ctx.input_button(Button::NK_BUTTON_LEFT, lparam as u16 as i32, (lparam >> 16) as u16 as i32, false);
+                ctx.input_button(Button::Left, lparam as u16 as i32, (lparam >> 16) as u16 as i32, false);
                 unsafe {
                     winuser::ReleaseCapture();
                 }
                 return true;
             }
             winuser::WM_RBUTTONDOWN => {
-                ctx.input_button(Button::NK_BUTTON_RIGHT, lparam as u16 as i32, (lparam >> 16) as u16 as i32, true);
+                ctx.input_button(Button::Right, lparam as u16 as i32, (lparam >> 16) as u16 as i32, true);
                 unsafe {
                     winuser::SetCapture(wnd);
                 }
                 return true;
             }
             winuser::WM_RBUTTONUP => {
-                ctx.input_button(Button::NK_BUTTON_RIGHT, lparam as u16 as i32, (lparam >> 16) as u16 as i32, false);
+                ctx.input_button(Button::Right, lparam as u16 as i32, (lparam >> 16) as u16 as i32, false);
                 unsafe {
                     winuser::ReleaseCapture();
                 }
                 return true;
             }
             winuser::WM_MBUTTONDOWN => {
-                ctx.input_button(Button::NK_BUTTON_MIDDLE, lparam as u16 as i32, (lparam >> 16) as u16 as i32, true);
+                ctx.input_button(Button::Middle, lparam as u16 as i32, (lparam >> 16) as u16 as i32, true);
                 unsafe {
                     winuser::SetCapture(wnd);
                 }
                 return true;
             }
             winuser::WM_MBUTTONUP => {
-                ctx.input_button(Button::NK_BUTTON_MIDDLE, lparam as u16 as i32, (lparam >> 16) as u16 as i32, false);
+                ctx.input_button(Button::Middle, lparam as u16 as i32, (lparam >> 16) as u16 as i32, false);
                 unsafe {
                     winuser::ReleaseCapture();
                 }
                 return true;
             }
             winuser::WM_MOUSEWHEEL => {
-                ctx.input_scroll(((wparam >> 16) as u16) as f32 / winuser::WHEEL_DELTA as f32);
+                ctx.input_scroll(Vec2 {
+                    x: 0.0,
+                    y: ((wparam >> 16) as u16) as f32 / winuser::WHEEL_DELTA as f32,
+                });
                 return true;
             }
             winuser::WM_MOUSEMOVE => {
@@ -439,65 +438,66 @@ impl Drawer {
     pub fn render(&self, ctx: &mut Context, clear: Color) {
         unsafe {
             let memory_dc = self.memory_dc;
-            wingdi::SelectObject(memory_dc, wingdi::GetStockObject(wingdi::DC_PEN as i32));
-            wingdi::SelectObject(memory_dc, wingdi::GetStockObject(wingdi::DC_BRUSH as i32));
             self.clear_dc(memory_dc, clear);
 
             for cmd in ctx.command_iterator() {
+                wingdi::SelectObject(memory_dc, wingdi::GetStockObject(wingdi::DC_PEN as i32));
+                wingdi::SelectObject(memory_dc, wingdi::GetStockObject(wingdi::DC_BRUSH as i32));
+
                 match cmd.get_type() {
-                    CommandType::NK_COMMAND_ARC_FILLED => {
+                    CommandType::ArcFilled => {
                         let a: &CommandArcFilled = cmd.as_ref();
                         nk_gdi_fill_arc(memory_dc, a.cx() as i32, a.cy() as i32, a.r() as u32, a.a()[0], a.a()[1], a.color());
                     }
-                    CommandType::NK_COMMAND_ARC => {
+                    CommandType::Arc => {
                         let a: &CommandArc = cmd.as_ref();
                         nk_gdi_stroke_arc(memory_dc, a.cx() as i32, a.cy() as i32, a.r() as u32, a.a()[0], a.a()[1], a.line_thickness() as i32, a.color());
                     }
-                    CommandType::NK_COMMAND_SCISSOR => {
+                    CommandType::Scissor => {
                         let s: &CommandScissor = cmd.as_ref();
                         nk_gdi_scissor(memory_dc, s.x() as f32, s.y() as f32, s.w() as f32, s.h() as f32);
                     }
-                    CommandType::NK_COMMAND_LINE => {
+                    CommandType::Line => {
                         let l: &CommandLine = cmd.as_ref();
                         nk_gdi_stroke_line(memory_dc, l.begin().x as i32, l.begin().y as i32, l.end().x as i32, l.end().y as i32, l.line_thickness() as i32, l.color());
                     }
-                    CommandType::NK_COMMAND_RECT => {
+                    CommandType::Rect => {
                         let r: &CommandRect = cmd.as_ref();
                         nk_gdi_stroke_rect(memory_dc, r.x() as i32, r.y() as i32, r.w() as i32, r.h() as i32, r.rounding() as u16 as i32, r.line_thickness() as i32, r.color());
                     }
-                    CommandType::NK_COMMAND_RECT_FILLED => {
+                    CommandType::RectFilled => {
                         let r: &CommandRectFilled = cmd.as_ref();
                         nk_gdi_fill_rect(memory_dc, r.x() as i32, r.y() as i32, r.w() as i32, r.h() as i32, r.rounding() as u16 as i32, r.color());
                     }
-                    CommandType::NK_COMMAND_CIRCLE => {
+                    CommandType::Circle => {
                         let c: &CommandCircle = cmd.as_ref();
                         nk_gdi_stroke_circle(memory_dc, c.x() as i32, c.y() as i32, c.w() as i32, c.h() as i32, c.line_thickness() as i32, c.color());
                     }
-                    CommandType::NK_COMMAND_CIRCLE_FILLED => {
+                    CommandType::CircleFilled => {
                         let c: &CommandCircleFilled = cmd.as_ref();
                         nk_gdi_fill_circle(memory_dc, c.x() as i32, c.y() as i32, c.w() as i32, c.h() as i32, c.color());
                     }
-                    CommandType::NK_COMMAND_TRIANGLE => {
+                    CommandType::Triangle => {
                         let t: &CommandTriangle = cmd.as_ref();
                         nk_gdi_stroke_triangle(memory_dc, t.a().x as i32, t.a().y as i32, t.b().x as i32, t.b().y as i32, t.c().x as i32, t.c().y as i32, t.line_thickness() as i32, t.color());
                     }
-                    CommandType::NK_COMMAND_TRIANGLE_FILLED => {
+                    CommandType::TriangleFilled => {
                         let t: &CommandTriangleFilled = cmd.as_ref();
                         nk_gdi_fill_triangle(memory_dc, t.a().x as i32, t.a().y as i32, t.b().x as i32, t.b().y as i32, t.c().x as i32, t.c().y as i32, t.color());
                     }
-                    CommandType::NK_COMMAND_POLYGON => {
+                    CommandType::Polygon => {
                         let p: &CommandPolygon = cmd.as_ref();
                         nk_gdi_stroke_polygon(memory_dc, p.points().as_ptr(), p.points().len() as usize, p.line_thickness() as i32, p.color());
                     }
-                    CommandType::NK_COMMAND_POLYGON_FILLED => {
+                    CommandType::PolygonFilled => {
                         let p: &CommandPolygonFilled = cmd.as_ref();
                         nk_gdi_fill_polygon(memory_dc, p.points().as_ptr(), p.points().len() as usize, p.color());
                     }
-                    CommandType::NK_COMMAND_POLYLINE => {
+                    CommandType::Polyline => {
                         let p: &CommandPolyline = cmd.as_ref();
                         nk_gdi_stroke_polyline(memory_dc, p.points().as_ptr(), p.points().len() as usize, p.line_thickness() as i32, p.color());
                     }
-                    CommandType::NK_COMMAND_TEXT => {
+                    CommandType::Text => {
                         let t: &CommandText = cmd.as_ref();
                         nk_gdi_draw_text(
                             memory_dc,
@@ -512,11 +512,11 @@ impl Drawer {
                             t.foreground(),
                         );
                     }
-                    CommandType::NK_COMMAND_CURVE => {
+                    CommandType::Curve => {
                         let q: &CommandCurve = cmd.as_ref();
                         nk_gdi_stroke_curve(memory_dc, q.begin(), q.ctrl()[0], q.ctrl()[1], q.end(), q.line_thickness() as i32, q.color());
                     }
-                    CommandType::NK_COMMAND_IMAGE => {
+                    CommandType::Image => {
                         let i: &CommandImage = cmd.as_ref();
                         nk_gdi_draw_image(memory_dc, i.x() as i32, i.y() as i32, i.w() as i32, i.h() as i32, i.img(), i.col());
                     }
@@ -567,6 +567,8 @@ unsafe fn nk_gdi_scissor(dc: windef::HDC, x: f32, y: f32, w: f32, h: f32) {
 unsafe fn nk_gdi_stroke_line(dc: windef::HDC, x0: i32, y0: i32, x1: i32, y1: i32, line_thickness: i32, col: Color) {
     let color = convert_color(col);
 
+    wingdi::SelectObject(dc, wingdi::GetStockObject(wingdi::NULL_BRUSH as i32));
+
     let mut pen = ptr::null_mut();
     if line_thickness == 1 {
         wingdi::SetDCPenColor(dc, color);
@@ -586,8 +588,10 @@ unsafe fn nk_gdi_stroke_line(dc: windef::HDC, x0: i32, y0: i32, x1: i32, y1: i32
 
 unsafe fn nk_gdi_stroke_rect(dc: windef::HDC, x: i32, y: i32, w: i32, h: i32, r: i32, line_thickness: i32, col: Color) {
     let color = convert_color(col);
-
     let mut pen = ptr::null_mut();
+
+    wingdi::SelectObject(dc, wingdi::GetStockObject(wingdi::NULL_BRUSH as i32));
+
     if line_thickness == 1 {
         wingdi::SetDCPenColor(dc, color);
     } else {
@@ -635,6 +639,8 @@ unsafe fn nk_gdi_stroke_triangle(dc: windef::HDC, x0: i32, y0: i32, x1: i32, y1:
     let color = convert_color(col);
     let points = [windef::POINT { x: x0, y: y0 }, windef::POINT { x: x1, y: y1 }, windef::POINT { x: x2, y: y2 }, windef::POINT { x: x0, y: y0 }];
 
+    wingdi::SelectObject(dc, wingdi::GetStockObject(wingdi::NULL_BRUSH as i32));
+
     let mut pen = ptr::null_mut();
     if line_thickness == 1 {
         wingdi::SetDCPenColor(dc, color);
@@ -671,6 +677,9 @@ unsafe fn nk_gdi_fill_polygon(dc: windef::HDC, pnts: *const Vec2i, count: usize,
 unsafe fn nk_gdi_stroke_polygon(dc: windef::HDC, pnts: *const Vec2i, count: usize, line_thickness: i32, col: Color) {
     let color = convert_color(col);
     let mut pen = ptr::null_mut();
+
+    wingdi::SelectObject(dc, wingdi::GetStockObject(wingdi::NULL_BRUSH as i32));
+
     if line_thickness == 1 {
         wingdi::SetDCPenColor(dc, color);
     } else {
@@ -696,6 +705,9 @@ unsafe fn nk_gdi_stroke_polygon(dc: windef::HDC, pnts: *const Vec2i, count: usiz
 unsafe fn nk_gdi_stroke_polyline(dc: windef::HDC, pnts: *const Vec2i, count: usize, line_thickness: i32, col: Color) {
     let color = convert_color(col);
     let mut pen = ptr::null_mut();
+
+    wingdi::SelectObject(dc, wingdi::GetStockObject(wingdi::NULL_BRUSH as i32));
+
     if line_thickness == 1 {
         wingdi::SetDCPenColor(dc, color);
     } else {
@@ -721,12 +733,22 @@ unsafe fn nk_gdi_fill_arc(dc: windef::HDC, cx: i32, cy: i32, r: u32, a1: f32, a2
     let color = convert_color(color);
     wingdi::SetDCBrushColor(dc, color);
     wingdi::SetDCPenColor(dc, color);
-    wingdi::AngleArc(dc, cx, cy, r, a1, a2);
+
+    let r = r as i32;
+
+    let (x1, y1, x2, y2) = (cx - r, cy - r, cx + r, cy + r);
+    let (x3, y3, x4, y4) = ((a1.cos() * r as f32) as i32 + cx, (a1.sin() * r as f32) as i32 + cy, (a2.cos() * r as f32) as i32 + cx, (a2.sin() * r as f32) as i32 + cy);
+
+    wingdi::SetArcDirection(dc, wingdi::AD_CLOCKWISE as i32);
+    wingdi::Arc(dc, x1, y1, x2, y2, x3, y3, x4, y4);
 }
 
 unsafe fn nk_gdi_stroke_arc(dc: windef::HDC, cx: i32, cy: i32, r: u32, a1: f32, a2: f32, line_thickness: i32, col: Color) {
     let color = convert_color(col);
     let mut pen = ptr::null_mut();
+
+    wingdi::SelectObject(dc, wingdi::GetStockObject(wingdi::NULL_BRUSH as i32));
+
     if line_thickness == 1 {
         wingdi::SetDCPenColor(dc, color);
     } else {
@@ -734,7 +756,12 @@ unsafe fn nk_gdi_stroke_arc(dc: windef::HDC, cx: i32, cy: i32, r: u32, a1: f32, 
         wingdi::SelectObject(dc, pen as *mut c_void);
     }
 
-    wingdi::AngleArc(dc, cx, cy, r, a1, a2);
+    let r = r as i32;
+    let (x1, y1, x2, y2) = (cx - r, cy - r, cx + r, cy + r);
+    let (x3, y3, x4, y4) = ((a1.cos() * r as f32) as i32 + cx, (a1.sin() * r as f32) as i32 + cy, (a2.cos() * r as f32) as i32 + cx, (a2.sin() * r as f32) as i32 + cy);
+
+    wingdi::SetArcDirection(dc, wingdi::AD_CLOCKWISE as i32);
+    wingdi::Arc(dc, x1, y1, x2, y2, x3, y3, x4, y4);
 
     if !pen.is_null() {
         wingdi::SelectObject(dc, wingdi::GetStockObject(wingdi::DC_PEN as i32));
@@ -752,6 +779,9 @@ unsafe fn nk_gdi_fill_circle(dc: windef::HDC, x: i32, y: i32, w: i32, h: i32, co
 unsafe fn nk_gdi_stroke_circle(dc: windef::HDC, x: i32, y: i32, w: i32, h: i32, line_thickness: i32, col: Color) {
     let color = convert_color(col);
     let mut pen = ptr::null_mut();
+
+    wingdi::SelectObject(dc, wingdi::GetStockObject(wingdi::NULL_BRUSH as i32));
+
     if line_thickness == 1 {
         wingdi::SetDCPenColor(dc, color);
     } else {
@@ -775,6 +805,8 @@ unsafe fn nk_gdi_stroke_curve(dc: windef::HDC, p1: Vec2i, p2: Vec2i, p3: Vec2i, 
         windef::POINT { x: p3.x as i32, y: p3.y as i32 },
         windef::POINT { x: p4.x as i32, y: p4.y as i32 },
     ];
+
+    wingdi::SelectObject(dc, wingdi::GetStockObject(wingdi::NULL_BRUSH as i32));
 
     let mut pen = ptr::null_mut();
     if line_thickness == 1 {
@@ -828,7 +860,7 @@ unsafe fn nk_gdi_draw_text(dc: windef::HDC, x: i32, y: i32, _: i32, _: i32, text
 }
 
 unsafe extern "C" fn nk_gdifont_get_text_width(handle: nksys::nk_handle, _: f32, text: *const i8, len: i32) -> f32 {
-    let font = *handle.ptr.as_ref() as *const GdiFont;
+    let font = handle.ptr as *const GdiFont;
     if font.is_null() || text.is_null() {
         return 0.0;
     }
@@ -906,6 +938,10 @@ pub fn bundle(window_name: &str, width: u16, height: u16, font_name: &str, font_
     (drawer, context, font_id as GdiFontID)
 }
 
+#[cfg(not(debug_assertions))]
+pub unsafe fn log_error() {}
+
+#[cfg(debug_assertions)]
 pub unsafe fn log_error() {
     let error = errhandlingapi::GetLastError();
     if error == 0 {
